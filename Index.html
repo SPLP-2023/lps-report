@@ -35,31 +35,39 @@
     <button onclick="printReport()">Print Report</button>
   </div>
 
-  <script>
-    function addToReport() {
-      const standard = document.getElementById("standard").value;
-      const fault = document.getElementById("fault").value;
-      const report = document.getElementById("report");
+<!-- Include jsPDF from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  function addToReport() {
+    const standard = document.getElementById("standard").value;
+    const fault = document.getElementById("fault").value;
+    const report = document.getElementById("report");
 
-      let summary = "";
+    let summary = "";
 
-      if (fault === "No RCD protection") {
-        summary = `Fault: No RCD protection detected.\nStandard: ${standard} - Clause 2.6.3 - RCDs must be installed for all final sub-circuits.`;
-      } else if (fault === "Incorrect earthing") {
-        summary = `Fault: Incorrect earthing observed.\nStandard: ${standard} - Clause 5.4.2 - Earthing conductors must meet minimum size and continuity requirements.`;
-      }
-
-      report.value += summary + "\n\n";
+    if (fault === "No RCD protection") {
+      summary = `Fault: No RCD protection detected.\nStandard: ${standard} - Clause 2.6.3 - RCDs must be installed for all final sub-circuits.`;
+    } else if (fault === "Incorrect earthing") {
+      summary = `Fault: Incorrect earthing observed.\nStandard: ${standard} - Clause 5.4.2 - Earthing conductors must meet minimum size and continuity requirements.`;
     }
 
-    function printReport() {
-      const text = document.getElementById("report").value;
-      const blob = new Blob([text], { type: "text/plain" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "lps-report.txt";
-      link.click();
+    report.value += summary + "\n\n";
+  }
+
+  async function printReport() {
+    const { jsPDF } = window.jspdf;
+    const reportText = document.getElementById("report").value;
+
+    if (!reportText.trim()) {
+      alert("No report content to print.");
+      return;
     }
-  </script>
+
+    const doc = new jsPDF();
+    const lines = doc.splitTextToSize(reportText, 180);
+    doc.text(lines, 10, 10);
+    doc.save("LPS-Report.pdf");
+  }
+</script>
 </body>
 </html>
