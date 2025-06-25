@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>LPS Reporting Tool</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 700px; margin: auto; }
+    textarea, select, button { display: block; margin-top: 10px; width: 100%; padding: 10px; }
+    .section { margin-bottom: 30px; }
+  </style>
+</head>
+<body>
+  <h1>LPS Reporting Tool</h1>
+
+  <div class="section">
+    <label for="standard">Choose Standard:</label>
+    <select id="standard">
+      <option value="AS/NZS 3000">AS/NZS 3000</option>
+      <option value="AS/NZS 3017">AS/NZS 3017</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <label for="fault">Select Fault:</label>
+    <select id="fault">
+      <option value="No RCD protection">No RCD protection</option>
+      <option value="Incorrect earthing">Incorrect earthing</option>
+    </select>
+    <button onclick="addToReport()">Add to Report</button>
+  </div>
+
+  <div class="section">
+    <h2>Report</h2>
+    <textarea id="report" rows="10" readonly></textarea>
+    <button onclick="printReport()">Print Report</button>
+  </div>
+
+  <script>
+    function addToReport() {
+      const standard = document.getElementById("standard").value;
+      const fault = document.getElementById("fault").value;
+      const report = document.getElementById("report");
+
+      let summary = "";
+
+      if (fault === "No RCD protection") {
+        summary = `Fault: No RCD protection detected.\nStandard: ${standard} - Clause 2.6.3 - RCDs must be installed for all final sub-circuits.`;
+      } else if (fault === "Incorrect earthing") {
+        summary = `Fault: Incorrect earthing observed.\nStandard: ${standard} - Clause 5.4.2 - Earthing conductors must meet minimum size and continuity requirements.`;
+      }
+
+      report.value += summary + "\n\n";
+    }
+
+    function printReport() {
+      const text = document.getElementById("report").value;
+      const blob = new Blob([text], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "lps-report.txt";
+      link.click();
+    }
+  </script>
+</body>
+</html>
