@@ -18,7 +18,7 @@ const MARGIN   = 14;
 const COL_L    = MARGIN;
 const COL_R    = PAGE_W / 2 + 3;
 const COL_W    = PAGE_W / 2 - MARGIN - 3;
-const PAGE_BOT = 268; // above footer bar
+const PAGE_BOT = 262; // above footer image zone
 
 // ===================== HELPERS =====================
 
@@ -99,9 +99,10 @@ function addFooterToPage(pdf) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, barY, PAGE_W, barH, 'F');
 
-    // Footer logos image centred — 600x150px source = 4:1 ratio, so 72mm wide x 18mm tall
+    // Footer logos image — sits above the navy bar, clear of page content
+    // Bar starts at 281mm. Image is 18mm tall, positioned at 263mm so it floats just above bar.
     try {
-        if (_footerBase64) pdf.addImage(_footerBase64, 'PNG', PAGE_W/2 - 36, barY - 1, 72, 18);
+        if (_footerBase64) pdf.addImage(_footerBase64, 'PNG', PAGE_W/2 - 36, 263, 72, 18);
     } catch (e) { /* */ }
 
     // Footer text
@@ -696,30 +697,24 @@ function buildInspectionImages(pdf, images) {
 // ===================== MAIN PDF GENERATOR =====================
 
 /**
- * Pre-load an image URL as base64 data URI for use in jsPDF.
- * keepTransparency=true uses RGBA canvas (for footer logos on dark bg).
- * keepTransparency=false fills white behind the image (for logos on white bg).
+ * Read an already-loaded <img> element from the DOM into a base64 PNG data URI.
+ * The img element must be present and loaded before calling this.
+ * whiteBackground=true fills behind transparent pixels (use for logos on white page).
+ * whiteBackground=false keeps transparency (use for logos on dark backgrounds).
  */
-function loadImageAsBase64(url, keepTransparency = false) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            if (!keepTransparency) {
-                // White background so transparent PNGs don't go black in PDF
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = () => resolve(null);
-        img.src = url;
-    });
+function imgElementToBase64(elementId, whiteBackground) {
+    const img = document.getElementById(elementId);
+    if (!img || !img.complete || img.naturalWidth === 0) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width  = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (whiteBackground) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/png');
 }
 
 // Module-level cache for pre-loaded images
@@ -730,11 +725,9 @@ async function generatePDF() {
     // Rebuild system details from DOM to catch any missed selections
     rebuildSystemDetailsFromDOM();
 
-    // Pre-load static images as base64 so jsPDF can embed them
-    // Logo: white background (transparent PNG would go black in jsPDF)
-    // Footer: keep transparency so logos sit on navy bar
-    if (!_logoBase64)   _logoBase64   = await loadImageAsBase64(COMPANY_LOGO_URL, false);
-    if (!_footerBase64) _footerBase64 = await loadImageAsBase64(FOOTER_IMAGE_URL, true);
+    // Read branding images from preloaded DOM img elements (guaranteed loaded, no timing issues)
+    if (!_logoBase64)   _logoBase64   = imgElementToBase64('preload-logo',   true);   // white bg
+    if (!_footerBase64) _footerBase64 = imgElementToBase64('preload-footer', false);  // transparent
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
