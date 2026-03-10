@@ -67,10 +67,10 @@ function addPageHeader(pdf, title, subtitle) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, barH, 'F');
 
-    // Logo on left (async-loaded by browser; use URL directly)
+    // Logo on left — use pre-loaded base64
     try {
-        pdf.addImage(COMPANY_LOGO_URL, 'PNG', 4, 1, 28, 16);
-    } catch (e) { /* logo may not load in some environments */ }
+        if (_logoBase64) pdf.addImage(_logoBase64, 'PNG', 4, 1, 28, 16);
+    } catch (e) { /* */ }
 
     // Title centred
     pdf.setTextColor(255, 255, 255);
@@ -99,9 +99,9 @@ function addFooterToPage(pdf) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, barY, PAGE_W, barH, 'F');
 
-    // Footer logos image centred — transparent background sits cleanly on navy
+    // Footer logos image centred — use pre-loaded base64
     try {
-        pdf.addImage(FOOTER_IMAGE_URL, 'PNG', PAGE_W/2 - 35, barY + 1, 70, 10);
+        if (_footerBase64) pdf.addImage(_footerBase64, 'PNG', PAGE_W/2 - 35, barY + 1, 70, 10);
     } catch (e) { /* */ }
 
     // Footer text
@@ -192,11 +192,13 @@ function buildCoverPage(pdf, data) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, 10, 'F');
 
-    // Company logo centred
+    // Company logo centred — use pre-loaded base64
     let logoY = 14;
     try {
-        const logoH = addImageToPDF(pdf, COMPANY_LOGO_URL, MARGIN, logoY, PAGE_W - MARGIN * 2, 50, true);
-        logoY += logoH + 6;
+        if (_logoBase64) {
+            const logoH = addImageToPDF(pdf, _logoBase64, MARGIN, logoY, PAGE_W - MARGIN * 2, 50, true);
+            logoY += logoH + 6;
+        } else { logoY += 56; }
     } catch (e) { logoY += 56; }
 
     // Building image
@@ -239,14 +241,28 @@ function buildCoverPage(pdf, data) {
     }
 
     // Info card
-    const infoH = siteStaffSignature ? 56 : 46;
+    const infoH = siteStaffSignature ? 72 : 62;
+    pdf.setFillColor(250, 252, 255);
+    pdf.rect(cardX, logoY, cardW, infoH, 'F');
     pdf.setDrawColor(...BLUE_ACCENT);
     pdf.setLineWidth(0.5);
     pdf.rect(cardX, logoY, cardW, infoH);
 
+    // Vertical centre divider
+    const divX = cardX + cardW / 2;
+    pdf.setLineWidth(0.3);
+    pdf.setDrawColor(210, 225, 240);
+    pdf.line(divX, logoY + 4, divX, logoY + infoH - 4);
+
+    // Horizontal row dividers
+    const rowPositions = [14, 28, 42];
+    rowPositions.forEach(offset => {
+        pdf.line(cardX + 4, logoY + offset, cardX + cardW - 4, logoY + offset);
+    });
+
     const col1X = cardX + 5;
-    const col2X = PAGE_W / 2 + 3;
-    const infoFs = 8;
+    const col2X = cardX + cardW / 2 + 5;
+    const infoFs = 9;
     const labelColor = [100, 130, 160];
     const valueColor = [20, 20, 20];
 
@@ -258,11 +274,11 @@ function buildCoverPage(pdf, data) {
         pdf.setFontSize(infoFs);
         pdf.setFont(undefined, 'bold');
         pdf.setTextColor(...valueColor);
-        const lines = pdf.splitTextToSize(value || '-', (cardW / 2) - 8);
-        pdf.text(lines[0], x, y + 6);
+        const lines = pdf.splitTextToSize(value || '-', (cardW / 2) - 10);
+        pdf.text(lines[0], x, y + 7);
     }
 
-    let iy = logoY + 8;
+    let iy = logoY + 10;
     infoField('Job Reference', jobReference, col1X, iy);
     infoField('Date', formatDate(testDate), col2X, iy);
     iy += 14;
@@ -279,8 +295,10 @@ function buildCoverPage(pdf, data) {
         try {
             pdf.addImage(siteStaffSignature, 'PNG', col2X, iy + 2, 50, 14);
         } catch (e) { /* */ }
+        iy += 18;
+    } else {
+        iy += 14;
     }
-    iy += 14;
     infoField('Site Address', siteAddress || '-', col1X, iy);
 
     // Footer
@@ -523,7 +541,7 @@ function buildEarthResistance(pdf, data) {
             pdf.setFontSize(10);
             pdf.setFont(undefined, 'bold');
             pdf.setTextColor(255, 255, 255);
-            const overallLabel = `Overall System Resistance: ${overall.toFixed(3)} \u03A9  \u2014  ${pass ? 'BELOW 10 \u03A9' : 'EXCEEDS 10 \u03A9'}${suffix}`;
+            const overallLabel = `Overall System Resistance: ${overall.toFixed(3)} ohms  --  ${pass ? 'BELOW 10 ohms' : 'EXCEEDS 10 ohms'}${suffix}`;
             const overallLines = pdf.splitTextToSize(overallLabel, PAGE_W - MARGIN * 2 - 6);
             const lineH = 4.5;
             const textY = y + (boxH / 2) - ((overallLines.length - 1) * lineH / 2);
@@ -675,9 +693,37 @@ function buildInspectionImages(pdf, images) {
 
 // ===================== MAIN PDF GENERATOR =====================
 
+/**
+ * Pre-load an image URL as base64 data URI for use in jsPDF.
+ */
+function loadImageAsBase64(url) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => resolve(null);
+        img.src = url;
+    });
+}
+
+// Module-level cache for pre-loaded images
+let _logoBase64   = null;
+let _footerBase64 = null;
+
 async function generatePDF() {
     // Rebuild system details from DOM to catch any missed selections
     rebuildSystemDetailsFromDOM();
+
+    // Pre-load static images as base64 so jsPDF can embed them
+    if (!_logoBase64)   _logoBase64   = await loadImageAsBase64(COMPANY_LOGO_URL);
+    if (!_footerBase64) _footerBase64 = await loadImageAsBase64(FOOTER_IMAGE_URL);
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
