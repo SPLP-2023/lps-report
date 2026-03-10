@@ -6,7 +6,7 @@
 // =============================================================================
 
 const COMPANY_LOGO_URL  = './assets/Color logo - no background (px reduction).png';
-const FOOTER_IMAGE_URL  = './assets/es12.png';
+const FOOTER_IMAGE_URL  = './assets/es12nobackground.png';
 const NAVY              = [13, 27, 42];         // #0d1b2a
 const BLUE_ACCENT       = [8, 119, 195];        // #0877c3
 const AMBER             = [230, 126, 34];       // cover page title accent
@@ -93,15 +93,15 @@ function addPageHeader(pdf, title, subtitle) {
  * Draw the footer bar: navy bar with footer logos image + company text.
  */
 function addFooterToPage(pdf) {
-    const barY = PAGE_H - 22;
-    const barH = 22;
+    const barH = 16;
+    const barY = PAGE_H - barH;
 
     pdf.setFillColor(...NAVY);
     pdf.rect(0, barY, PAGE_W, barH, 'F');
 
-    // Footer logos image centred
+    // Footer logos image centred — transparent background sits cleanly on navy
     try {
-        pdf.addImage(FOOTER_IMAGE_URL, 'PNG', PAGE_W/2 - 35, barY + 1, 70, 11);
+        pdf.addImage(FOOTER_IMAGE_URL, 'PNG', PAGE_W/2 - 35, barY + 1, 70, 10);
     } catch (e) { /* */ }
 
     // Footer text
@@ -109,7 +109,7 @@ function addFooterToPage(pdf) {
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(160, 190, 210);
     const lines = pdf.splitTextToSize(COMPANY_FOOTER, 180);
-    pdf.text(lines, PAGE_W / 2, barY + 15, { align: 'center' });
+    pdf.text(lines, PAGE_W / 2, barY + 11, { align: 'center' });
     pdf.setTextColor(0, 0, 0);
 }
 
@@ -295,16 +295,27 @@ function buildInspectionSummary(pdf, data, pageTitle) {
     const { selectedFailures, generalComments, standard } = data;
     const hasFaults = selectedFailures && selectedFailures.length > 0;
 
-    // PASS/FAIL banner
-    const bannerH = 10;
-    pdf.setFillColor(...(hasFaults ? [200, 40, 40] : [34, 139, 34]));
-    pdf.rect(MARGIN, y, PAGE_W - MARGIN * 2, bannerH, 'F');
-    pdf.setFontSize(11);
+    // Compliance Result label
+    y += 4;
+    pdf.setFontSize(9);
+    pdf.setFont(undefined, 'normal');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Compliance Result', PAGE_W / 2, y, { align: 'center' });
+    y += 5;
+
+    // PASS/FAIL pill-sized banner
+    const bannerLabel = hasFaults ? 'FAIL — Action Required' : 'PASS';
+    pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
+    const labelW = pdf.getTextWidth(bannerLabel) + 18;
+    const bannerH = 13;
+    const bannerX = (PAGE_W - labelW) / 2;
+    pdf.setFillColor(...(hasFaults ? [200, 40, 40] : [34, 139, 34]));
+    pdf.rect(bannerX, y, labelW, bannerH, 'F');
     pdf.setTextColor(255, 255, 255);
-    pdf.text(hasFaults ? 'FAIL — Action Required' : 'PASS', PAGE_W / 2, y + 7, { align: 'center' });
+    pdf.text(bannerLabel, PAGE_W / 2, y + 9, { align: 'center' });
     pdf.setTextColor(0, 0, 0);
-    y += bannerH + 4;
+    y += bannerH + 6;
 
     pdf.setFontSize(7.5);
     pdf.setFont(undefined, 'italic');
@@ -483,22 +494,8 @@ function buildStructureSystemDetails(pdf, data) {
         ['SPD Status',            surgeSafe || '-'],
     ], rightX, ry, halfW);
 
-    // General comments — full width below both tables
+    // Tables sit side by side — no general comments section here
     y = Math.max(ly, ry) + 4;
-    y = drawSectionHeader(pdf, 'GENERAL COMMENTS', MARGIN, y, PAGE_W - MARGIN * 2) + 3;
-    pdf.setFontSize(8.5);
-    pdf.setFont(undefined, 'normal');
-    if (generalComments) {
-        const lines = pdf.splitTextToSize(generalComments, PAGE_W - MARGIN * 2 - 4);
-        pdf.text(lines, MARGIN + 2, y);
-        y += lines.length * 4.5 + 4;
-    } else {
-        pdf.setFont(undefined, 'italic');
-        pdf.setTextColor(140, 140, 140);
-        pdf.text('No general comments recorded.', MARGIN + 2, y);
-        pdf.setTextColor(0, 0, 0);
-        y += 10;
-    }
 }
 
 // ===================== EARTH RESISTANCE TESTING =====================
@@ -523,10 +520,14 @@ function buildEarthResistance(pdf, data) {
             const pass = overall <= 10;
             pdf.setFillColor(...(pass ? [34, 139, 34] : [200, 40, 40]));
             pdf.rect(MARGIN, y, PAGE_W - MARGIN * 2, boxH, 'F');
-            pdf.setFontSize(11);
+            pdf.setFontSize(10);
             pdf.setFont(undefined, 'bold');
             pdf.setTextColor(255, 255, 255);
-            pdf.text(`Overall System Resistance: ${overall.toFixed(3)} Ω  —  ${pass ? 'BELOW 10 Ω' : 'EXCEEDS 10 Ω'}${suffix}`, PAGE_W / 2, y + 9, { align: 'center' });
+            const overallLabel = `Overall System Resistance: ${overall.toFixed(3)} \u03A9  \u2014  ${pass ? 'BELOW 10 \u03A9' : 'EXCEEDS 10 \u03A9'}${suffix}`;
+            const overallLines = pdf.splitTextToSize(overallLabel, PAGE_W - MARGIN * 2 - 6);
+            const lineH = 4.5;
+            const textY = y + (boxH / 2) - ((overallLines.length - 1) * lineH / 2);
+            pdf.text(overallLines, PAGE_W / 2, textY, { align: 'center', lineHeightFactor: 1.3 });
             pdf.setTextColor(0, 0, 0);
             y += boxH + 6;
         }
@@ -542,7 +543,7 @@ function buildEarthResistance(pdf, data) {
             addFooterToPage(pdf);
             y = addPageHeader(pdf, 'EARTH RESISTANCE TESTING (CONTINUED)', 'BS EN 62305 | Test & Inspection');
         }
-        y = drawSectionHeader(pdf, 'FINAL SUMMARY COMMENTS', MARGIN, y, PAGE_W - MARGIN * 2) + 3;
+        y = drawSectionHeader(pdf, 'GENERAL COMMENTS', MARGIN, y, PAGE_W - MARGIN * 2) + 3;
         pdf.setFontSize(8.5);
         pdf.setFont(undefined, 'normal');
         const lines = pdf.splitTextToSize(finalComments, PAGE_W - MARGIN * 2);
@@ -608,9 +609,11 @@ function renderEarthTable(pdf, rows, y) {
             pdf.rect(leftMargin, y, tableWidth, rowH, 'F');
         }
 
+        const rawR = earth.resistance;
+        const displayR = rawR > 0 ? (Number.isInteger(rawR) ? String(rawR) : parseFloat(rawR.toPrecision(6)).toString()) : '-';
         const rowData = [
             `E${earth.earthNumber}`,
-            earth.resistance > 0 ? earth.resistance.toFixed(2) : '-',
+            displayR,
             earth.testClamp || '-',
             earth.pitType || '-',
             earth.testType || '-',
@@ -721,8 +724,7 @@ async function generatePDF() {
         structureHeight, structurePerimeter, structureUse, structureOccupancy,
         structureAge, previousInspections,
         systemDetails: window.systemDetails,
-        earthArrangement, mainEquipotentialBond, surgeInstalled, surgeType, surgeSafe,
-        generalComments
+        earthArrangement, mainEquipotentialBond, surgeInstalled, surgeType, surgeSafe
     };
 
     const earthResData = {
