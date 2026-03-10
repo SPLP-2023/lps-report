@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StrikeR — Strike Point Lightning Protection</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" type="image/png" href="assets/SP Bolt 400x400.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="StrikeR">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+</head>
+<body>
+<div style="max-width:600px;margin:40px auto;padding:30px 20px;text-align:center;background:white;box-shadow:0 0 10px rgba(0,0,0,0.1);">
+    <div style="margin-bottom:16px;">
+        <img src="assets/SP Bolt 400x400.png" alt="Strike Point" style="width:90px;height:90px;">
+    </div>
+    <h1 style="font-size:2.2em;margin-bottom:6px;padding:0;background:none;color:#0d1b2a;border-radius:0;">StrikeR</h1>
+    <p style="color:#6c757d;font-size:1em;margin-bottom:36px;">Lightning Protection Reporting Tool</p>
+
+    <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;">
+        <div onclick="location.href='reports.html'"
+             style="background:white;border:2px solid #0877c3;border-radius:12px;padding:32px 24px;width:210px;cursor:pointer;box-shadow:0 2px 10px rgba(8,119,195,0.12);transition:all 0.2s;"
+             onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(8,119,195,0.2)'"
+             onmouseout="this.style.transform='';this.style.boxShadow='0 2px 10px rgba(8,119,195,0.12)'">
+            <div style="font-size:2.4em;margin-bottom:12px;">📋</div>
+            <div style="font-size:1.15em;font-weight:700;color:#0d1b2a;margin-bottom:8px;">Reports</div>
+            <div style="font-size:0.85em;color:#6c757d;line-height:1.4;">Create Test &amp; Inspection, Survey, and Remedial Reports</div>
+        </div>
+        <div onclick="location.href='tools.html'"
+             style="background:white;border:2px solid #0877c3;border-radius:12px;padding:32px 24px;width:210px;cursor:pointer;box-shadow:0 2px 10px rgba(8,119,195,0.12);transition:all 0.2s;"
+             onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(8,119,195,0.2)'"
+             onmouseout="this.style.transform='';this.style.boxShadow='0 2px 10px rgba(8,119,195,0.12)'">
+            <div style="font-size:2.4em;margin-bottom:12px;">🔧</div>
+            <div style="font-size:1.15em;font-weight:700;color:#0d1b2a;margin-bottom:8px;">Tools</div>
+            <div style="font-size:0.85em;color:#6c757d;line-height:1.4;">Separation Distance Calculator and engineering tools</div>
+        </div>
+    </div>
+</div>
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js')
+            .then(r => console.log('SW registered:', r.scope))
+            .catch(e => console.log('SW failed:', e));
+    }
+</script>
+</body>
+</html>
