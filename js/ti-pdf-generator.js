@@ -99,9 +99,9 @@ function addFooterToPage(pdf) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, barY, PAGE_W, barH, 'F');
 
-    // Footer logos image centred — use pre-loaded base64
+    // Footer logos image centred — 600x150px source = 4:1 ratio, so 72mm wide x 18mm tall
     try {
-        if (_footerBase64) pdf.addImage(_footerBase64, 'PNG', PAGE_W/2 - 35, barY + 1, 70, 10);
+        if (_footerBase64) pdf.addImage(_footerBase64, 'PNG', PAGE_W/2 - 36, barY - 1, 72, 18);
     } catch (e) { /* */ }
 
     // Footer text
@@ -241,7 +241,9 @@ function buildCoverPage(pdf, data) {
     }
 
     // Info card
-    const infoH = siteStaffSignature ? 72 : 62;
+    const rowH = 16;
+    const numRows = 4; // Job Ref/Date, Engineer/Kit, Site Staff/Sig, Site Address
+    const infoH = siteStaffSignature ? (numRows * rowH) + 6 : (numRows * rowH) + 2;
     pdf.setFillColor(250, 252, 255);
     pdf.rect(cardX, logoY, cardW, infoH, 'F');
     pdf.setDrawColor(...BLUE_ACCENT);
@@ -250,19 +252,12 @@ function buildCoverPage(pdf, data) {
 
     // Vertical centre divider
     const divX = cardX + cardW / 2;
-    pdf.setLineWidth(0.3);
     pdf.setDrawColor(210, 225, 240);
-    pdf.line(divX, logoY + 4, divX, logoY + infoH - 4);
-
-    // Horizontal row dividers
-    const rowPositions = [14, 28, 42];
-    rowPositions.forEach(offset => {
-        pdf.line(cardX + 4, logoY + offset, cardX + cardW - 4, logoY + offset);
-    });
+    pdf.setLineWidth(0.3);
+    pdf.line(divX, logoY + 1, divX, logoY + infoH - 1);
 
     const col1X = cardX + 5;
     const col2X = cardX + cardW / 2 + 5;
-    const infoFs = 9;
     const labelColor = [100, 130, 160];
     const valueColor = [20, 20, 20];
 
@@ -270,36 +265,43 @@ function buildCoverPage(pdf, data) {
         pdf.setFontSize(6.5);
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(...labelColor);
-        pdf.text(label.toUpperCase(), x, y);
-        pdf.setFontSize(infoFs);
+        pdf.text(label.toUpperCase(), x, y + 3);
+        pdf.setFontSize(9);
         pdf.setFont(undefined, 'bold');
         pdf.setTextColor(...valueColor);
         const lines = pdf.splitTextToSize(value || '-', (cardW / 2) - 10);
-        pdf.text(lines[0], x, y + 7);
+        pdf.text(lines[0], x, y + 10);
     }
 
-    let iy = logoY + 10;
-    infoField('Job Reference', jobReference, col1X, iy);
-    infoField('Date', formatDate(testDate), col2X, iy);
-    iy += 14;
-    infoField('Engineer', engineerName, col1X, iy);
-    infoField('Test Kit Ref', testKitRef, col2X, iy);
-    iy += 14;
-    infoField('Site Staff', siteStaffName, col1X, iy);
+    // Draw rows with dividers between them
+    let iy = logoY;
+    const rows = [
+        [['Job Reference', jobReference], ['Date', formatDate(testDate)]],
+        [['Engineer', engineerName],      ['Test Kit Ref', testKitRef]],
+        [['Site Staff', siteStaffName],   siteStaffSignature ? null : ['', '']],
+        [['Site Address', siteAddress],   ['', '']],
+    ];
 
-    if (siteStaffSignature) {
-        pdf.setFontSize(6.5);
-        pdf.setFont(undefined, 'normal');
-        pdf.setTextColor(...labelColor);
-        pdf.text('SITE STAFF SIGNATURE', col2X, iy);
-        try {
-            pdf.addImage(siteStaffSignature, 'PNG', col2X, iy + 2, 50, 14);
-        } catch (e) { /* */ }
-        iy += 18;
-    } else {
-        iy += 14;
-    }
-    infoField('Site Address', siteAddress || '-', col1X, iy);
+    rows.forEach((row, i) => {
+        // Horizontal divider above each row (except first)
+        if (i > 0) {
+            pdf.setDrawColor(210, 225, 240);
+            pdf.setLineWidth(0.3);
+            pdf.line(cardX + 1, iy, cardX + cardW - 1, iy);
+        }
+        infoField(row[0][0], row[0][1], col1X, iy);
+        if (row[1] && row[1][0]) infoField(row[1][0], row[1][1], col2X, iy);
+
+        // Signature on row 2 right column
+        if (i === 2 && siteStaffSignature) {
+            pdf.setFontSize(6.5);
+            pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(...labelColor);
+            pdf.text('SITE STAFF SIGNATURE', col2X, iy + 3);
+            try { pdf.addImage(siteStaffSignature, 'PNG', col2X, iy + 4, 50, 10); } catch(e) {}
+        }
+        iy += rowH;
+    });
 
     // Footer
     addFooterToPage(pdf);
@@ -695,8 +697,10 @@ function buildInspectionImages(pdf, images) {
 
 /**
  * Pre-load an image URL as base64 data URI for use in jsPDF.
+ * keepTransparency=true uses RGBA canvas (for footer logos on dark bg).
+ * keepTransparency=false fills white behind the image (for logos on white bg).
  */
-function loadImageAsBase64(url) {
+function loadImageAsBase64(url, keepTransparency = false) {
     return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -705,6 +709,11 @@ function loadImageAsBase64(url) {
             canvas.width = img.naturalWidth;
             canvas.height = img.naturalHeight;
             const ctx = canvas.getContext('2d');
+            if (!keepTransparency) {
+                // White background so transparent PNGs don't go black in PDF
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
             ctx.drawImage(img, 0, 0);
             resolve(canvas.toDataURL('image/png'));
         };
@@ -722,8 +731,10 @@ async function generatePDF() {
     rebuildSystemDetailsFromDOM();
 
     // Pre-load static images as base64 so jsPDF can embed them
-    if (!_logoBase64)   _logoBase64   = await loadImageAsBase64(COMPANY_LOGO_URL);
-    if (!_footerBase64) _footerBase64 = await loadImageAsBase64(FOOTER_IMAGE_URL);
+    // Logo: white background (transparent PNG would go black in jsPDF)
+    // Footer: keep transparency so logos sit on navy bar
+    if (!_logoBase64)   _logoBase64   = await loadImageAsBase64(COMPANY_LOGO_URL, false);
+    if (!_footerBase64) _footerBase64 = await loadImageAsBase64(FOOTER_IMAGE_URL, true);
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
