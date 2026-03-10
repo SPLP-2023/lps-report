@@ -67,9 +67,9 @@ function addPageHeader(pdf, title, subtitle) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, barH, 'F');
 
-    // Logo on left — use pre-loaded base64
+    // Logo on left — pass URL directly, same pattern as working app
     try {
-        if (_logoBase64) pdf.addImage(_logoBase64, 'PNG', 4, 1, 28, 16);
+        addImageToPDF(pdf, COMPANY_LOGO_URL, 2, 1, 30, 16, false);
     } catch (e) { /* */ }
 
     // Title centred
@@ -100,9 +100,8 @@ function addFooterToPage(pdf) {
     pdf.rect(0, barY, PAGE_W, barH, 'F');
 
     // Footer logos image — sits above the navy bar, clear of page content
-    // Bar starts at 281mm. Image is 18mm tall, positioned at 263mm so it floats just above bar.
     try {
-        if (_footerBase64) pdf.addImage(_footerBase64, 'PNG', PAGE_W/2 - 36, 263, 72, 18);
+        addImageToPDF(pdf, FOOTER_IMAGE_URL, PAGE_W/2 - 36, 263, 72, 18, false);
     } catch (e) { /* */ }
 
     // Footer text
@@ -193,13 +192,11 @@ function buildCoverPage(pdf, data) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, 10, 'F');
 
-    // Company logo centred — use pre-loaded base64
+    // Company logo centred — pass URL directly, same pattern as working app
     let logoY = 14;
     try {
-        if (_logoBase64) {
-            const logoH = addImageToPDF(pdf, _logoBase64, MARGIN, logoY, PAGE_W - MARGIN * 2, 50, true);
-            logoY += logoH + 6;
-        } else { logoY += 56; }
+        const logoH = addImageToPDF(pdf, COMPANY_LOGO_URL, MARGIN, logoY, PAGE_W - MARGIN * 2, 50, true);
+        logoY += logoH + 6;
     } catch (e) { logoY += 56; }
 
     // Building image
@@ -696,38 +693,13 @@ function buildInspectionImages(pdf, images) {
 
 // ===================== MAIN PDF GENERATOR =====================
 
-/**
- * Read an already-loaded <img> element from the DOM into a base64 PNG data URI.
- * The img element must be present and loaded before calling this.
- * whiteBackground=true fills behind transparent pixels (use for logos on white page).
- * whiteBackground=false keeps transparency (use for logos on dark backgrounds).
- */
-function imgElementToBase64(elementId, whiteBackground) {
-    const img = document.getElementById(elementId);
-    if (!img || !img.complete || img.naturalWidth === 0) return null;
-    const canvas = document.createElement('canvas');
-    canvas.width  = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    if (whiteBackground) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    ctx.drawImage(img, 0, 0);
-    return canvas.toDataURL('image/png');
-}
-
-// Module-level cache for pre-loaded images
-let _logoBase64   = null;
-let _footerBase64 = null;
+// Module-level cache no longer needed — using URL strings directly like pdf-generator-shared.js
 
 async function generatePDF() {
     // Rebuild system details from DOM to catch any missed selections
     rebuildSystemDetailsFromDOM();
 
-    // Read branding images from preloaded DOM img elements (guaranteed loaded, no timing issues)
-    if (!_logoBase64)   _logoBase64   = imgElementToBase64('preload-logo',   true);   // white bg
-    if (!_footerBase64) _footerBase64 = imgElementToBase64('preload-footer', false);  // transparent
+    // Images loaded directly from URL by jsPDF (same pattern as pdf-generator-shared.js)
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
