@@ -311,15 +311,102 @@ function rmBuildWorks(pdf, data) {
         });
         y += 8;
     }
+}
 
-    // Completion Notes
-    if (data.completionNotes && data.completionNotes.trim()) {
-        if (y + 30 > RM_PAGE_BOT) y = rmNewPage(pdf, 'COMPLETION NOTES', 'Lightning Protection Remedial Report');
-        else y = rmSectionHeader(pdf, 'Completion Notes', M, y, W) + 6;
+// ===================== COMPLETION NOTES & COMPLIANCE PAGE =====================
+// Mirrors the T&I inspection summary layout: result pill, supporting text, notes
+
+function rmBuildCompletionPage(pdf, data) {
+    const { complianceResult, completionNotes, remedialDate, remedialEngineer, selectedRepairs } = data;
+    const hasResult = complianceResult === 'PASS' || complianceResult === 'FAIL';
+    const isPass    = complianceResult === 'PASS';
+
+    let y = rmNewPage(pdf, 'COMPLETION SUMMARY', 'Lightning Protection Remedial Report');
+    const M  = RM_MARGIN;
+    const W  = RM_PAGE_W - M * 2;
+
+    // ---- Compliance result block (only if PASS or FAIL selected) ----
+    if (hasResult) {
+        y += 4;
+
+        // "Compliance Result" label — matches T&I
+        pdf.setFontSize(16);
+        pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(80, 80, 80);
+        pdf.text('Compliance Result', RM_PAGE_W / 2, y, { align: 'center' });
+        y += 8;
+
+        // PASS / FAIL pill — matches T&I exactly
+        const bannerLabel = isPass ? 'PASS' : 'FAIL — Action Required';
+        pdf.setFontSize(26);
+        pdf.setFont(undefined, 'bold');
+        const labelW  = pdf.getTextWidth(bannerLabel) + 10;
+        const bannerH = 14;
+        const bannerX = (RM_PAGE_W - labelW) / 2;
+        pdf.setFillColor(...(isPass ? [34, 139, 34] : [200, 40, 40]));
+        pdf.rect(bannerX, y, labelW, bannerH, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(bannerLabel, RM_PAGE_W / 2, y + 10.5, { align: 'center' });
+        pdf.setTextColor(0, 0, 0);
+        y += bannerH + 7;
+
+        // Supporting line
+        pdf.setFontSize(11);
+        pdf.setFont(undefined, 'italic');
+        pdf.setTextColor(80, 80, 80);
+        if (isPass) {
+            pdf.text('Remedial works have been completed and the system is now compliant.', RM_PAGE_W / 2, y, { align: 'center' });
+            y += 7;
+            pdf.text('This certificate is valid for 12 months from the date of issue.', RM_PAGE_W / 2, y, { align: 'center' });
+        } else {
+            pdf.text('Remedial works have been carried out, however the system remains non-compliant.', RM_PAGE_W / 2, y, { align: 'center' });
+            y += 7;
+            pdf.text('Further action is required to achieve compliance.', RM_PAGE_W / 2, y, { align: 'center' });
+        }
+        y += 7;
+
+        // Standard note — matches T&I small italic lines
+        pdf.setFontSize(11);
+        pdf.setFont(undefined, 'italic');
+        pdf.setTextColor(120, 120, 120);
+        pdf.text('All works are carried out in accordance with BS EN 62305, BS6651, NF C 17-102:2011 and BS7430.', RM_PAGE_W / 2, y, { align: 'center' });
+        y += 6;
+        pdf.text('Lightning protection systems should be tested annually under The Electricity At Work Act 1989.', RM_PAGE_W / 2, y, { align: 'center' });
+        y += 14;
+        pdf.setTextColor(0, 0, 0);
+    }
+
+    // ---- Works Summary block ----
+    y = rmSectionHeader(pdf, 'Remedial Works Summary', M, y, W) + 5;
+
+    // Mini summary table: date, engineer, no. of repairs
+    const summaryRows = [
+        ['Date of Remedial Works', rmFormatDate(remedialDate)],
+        ['Remedial Engineer',      rmSafe(remedialEngineer) || '-'],
+        ['Number of Repairs',      String((selectedRepairs || []).length)],
+    ];
+    const rowH = 10, col1W = 70;
+    summaryRows.forEach((row, i) => {
+        const fy = y + i * rowH;
+        pdf.setFillColor(i % 2 === 0 ? 248 : 255, i % 2 === 0 ? 250 : 255, i % 2 === 0 ? 253 : 255);
+        pdf.rect(M, fy, W, rowH, 'F');
+        pdf.setDrawColor(220, 230, 240); pdf.setLineWidth(0.2);
+        pdf.rect(M, fy, W, rowH);
+        pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold'); pdf.setTextColor(60, 90, 130);
+        pdf.text(row[0], M + 3, fy + 7);
+        pdf.setFont(undefined, 'normal'); pdf.setTextColor(30, 30, 30);
+        pdf.text(rmSafe(row[1]), M + col1W, fy + 7);
+    });
+    y += summaryRows.length * rowH + 8;
+
+    // ---- Completion Notes ----
+    if (completionNotes && completionNotes.trim()) {
+        if (y + 30 > RM_PAGE_BOT) y = rmNewPage(pdf, 'COMPLETION SUMMARY (CONTINUED)', 'Lightning Protection Remedial Report');
+        y = rmSectionHeader(pdf, 'Completion Notes', M, y, W) + 5;
         pdf.setFontSize(9); pdf.setFont(undefined, 'normal'); pdf.setTextColor(30, 30, 30);
-        const lines = pdf.splitTextToSize(rmSafe(data.completionNotes), W - 4);
+        const lines = pdf.splitTextToSize(rmSafe(completionNotes), W - 4);
         lines.forEach(line => {
-            if (y > RM_PAGE_BOT - 8) y = rmNewPage(pdf, 'COMPLETION NOTES (CONTINUED)', 'Lightning Protection Remedial Report');
+            if (y > RM_PAGE_BOT - 8) y = rmNewPage(pdf, 'COMPLETION SUMMARY (CONTINUED)', 'Lightning Protection Remedial Report');
             pdf.text(line, M + 2, y);
             y += 5;
         });
@@ -335,8 +422,9 @@ function generateRemedialPDF() {
     const remedialDate     = document.getElementById('remedialDate')?.value || '';
     const remedialEngineer = document.getElementById('remedialEngineer')?.value || '';
     const siteStaffName    = document.getElementById('siteStaffName')?.value || '';
-    const additionalRepairs = document.getElementById('additionalRepairs')?.value || '';
-    const completionNotes  = document.getElementById('completionNotes')?.value || '';
+    const additionalRepairs  = document.getElementById('additionalRepairs')?.value || '';
+    const completionNotes    = document.getElementById('completionNotes')?.value || '';
+    const complianceResult   = document.getElementById('complianceResult')?.value || '';
 
     if (!siteAddress.trim() && !siteName.trim()) {
         alert('Please enter at least a Site Name or Site Address before generating the report.');
@@ -356,7 +444,7 @@ function generateRemedialPDF() {
 
     const data = {
         siteName, jobReference, siteAddress, remedialDate, remedialEngineer, siteStaffName,
-        additionalRepairs, completionNotes,
+        additionalRepairs, completionNotes, complianceResult,
         signatureData:   window.siteStaffSignature ? window.siteStaffSignature.getSignatureData() : null,
         buildingImage:   window.imageStore['building'] || null,
         selectedRepairs: window.selectedRepairs || [],
@@ -368,6 +456,7 @@ function generateRemedialPDF() {
 
     rmBuildCoverPage(pdf, data);
     rmBuildWorks(pdf, data);
+    rmBuildCompletionPage(pdf, data);
 
     const namePart = (siteName || jobReference || 'Remedial').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
     pdf.save(`Lightning Protection Remedial Report - ${namePart} ${rmFormatDateShort(remedialDate)}.pdf`);
