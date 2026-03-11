@@ -1,39 +1,34 @@
-// Survey Report PDF Generator — StrikeR
-// Matches T&I report PDF styling
+// ===================== SURVEY REPORT PDF GENERATOR =====================
+// Matches T&I report styling: navy/blue headers, logo top-right, ES12 footer
 
 const SV_NAVY        = [13, 27, 42];
 const SV_BLUE        = [8, 119, 195];
 const SV_WHITE       = [255, 255, 255];
-const SV_LIGHT_BLUE  = [240, 248, 255];
 const SV_PAGE_W      = 210;
 const SV_PAGE_H      = 297;
 const SV_MARGIN      = 14;
 const SV_PAGE_BOT    = 262;
-const SV_FOOTER_TEXT = 'Strike Point Lightning Protection Ltd  |  Registered office: Atkinson Evans, 10 Arnot Hill Road, Nottingham NG5 6LJ  |  Company No. 15114852, Registered in England and Wales  |  info@strikepoint.uk  |  01159903220';
+const SV_FOOTER_TEXT = 'Strike Point Lightning Protection Ltd  |  Registered office: Atkinson Evans, 10 Arnot Hill Road, Nottingham NG5 6LJ  |  Company No. 15114852  |  Registered in England and Wales';
 
-function svSafe(str) {
-    if (!str) return '';
-    return String(str).replace(/[^\x20-\x7E\u00A0-\u00FF]/g, '?');
-}
+function svSafe(str) { return (str || '').replace(/[^\x20-\x7E]/g, ''); }
 
 function svFormatDate(dateStr) {
     if (!dateStr) return '-';
-    const [y, m, d] = dateStr.split('-');
-    if (!y) return '-';
-    return `${d}-${m}-${y.slice(2)}`;
+    const [yyyy, mm, dd] = dateStr.split('-');
+    return yyyy ? `${dd}-${mm}-${yyyy.slice(2)}` : '-';
 }
 
-function svAddImage(pdf, data, x, y, maxW, maxH, centre) {
-    if (!data) return 0;
+function svAddImage(pdf, imgData, x, y, maxW, maxH, center) {
+    if (!imgData) return 0;
     try {
-        const fmt = data.includes('data:image/jpeg') ? 'JPEG' : 'PNG';
-        const props = pdf.getImageProperties(data);
-        const ratio = props.width / props.height;
+        const fmt = imgData.includes('data:image/jpeg') ? 'JPEG' : 'PNG';
+        const props = pdf.getImageProperties(imgData);
+        const ar = props.width / props.height;
         let w, h;
-        if (ratio > maxW / maxH) { w = maxW; h = maxW / ratio; }
-        else                      { h = maxH; w = maxH * ratio; }
-        const fx = centre ? x + (maxW - w) / 2 : x;
-        pdf.addImage(data, fmt, fx, y, w, h);
+        if (ar > maxW / maxH) { w = maxW; h = maxW / ar; }
+        else { h = maxH; w = maxH * ar; }
+        const fx = center ? x + (maxW - w) / 2 : x;
+        pdf.addImage(imgData, fmt, fx, y, w, h);
         return h;
     } catch(e) { return 0; }
 }
@@ -43,362 +38,394 @@ function svAddFooter(pdf) {
     pdf.setFillColor(...SV_NAVY);
     pdf.rect(0, barY, SV_PAGE_W, 18, 'F');
     if (window._footerBase64) {
-        svAddImage(pdf, window._footerBase64, SV_PAGE_W - 38, barY + 1, 28, 14, true);
+        svAddImage(pdf, window._footerBase64, SV_MARGIN, barY + 1, 38, 15, false);
     }
-    pdf.setFontSize(5.5);
+    pdf.setFontSize(6);
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(...SV_WHITE);
-    const lines = pdf.splitTextToSize(SV_FOOTER_TEXT, SV_PAGE_W - 44);
-    const lineH = 3.5;
+    const lines = pdf.splitTextToSize(SV_FOOTER_TEXT, SV_PAGE_W - SV_MARGIN * 2 - 42);
+    const lineH = 3.2;
     const blockH = lines.length * lineH;
-    const textY = barY + (18 - blockH) / 2 + lineH - 1;
-    lines.forEach((ln, i) => pdf.text(ln, SV_PAGE_W / 2 - 10, textY + i * lineH, { align: 'center' }));
+    const textY = barY + (18 - blockH) / 2 + lineH;
+    pdf.text(lines, SV_PAGE_W / 2 + 10, textY);
+    pdf.setTextColor(0, 0, 0);
 }
 
 function svAddHeader(pdf, title, subtitle) {
     pdf.setFillColor(...SV_NAVY);
-    pdf.rect(0, 0, SV_PAGE_W, 18, 'F');
+    pdf.rect(0, 0, SV_PAGE_W, 22, 'F');
     if (window._logoBase64) {
-        svAddImage(pdf, window._logoBase64, SV_PAGE_W - 46, 1, 32, 16, true);
+        svAddImage(pdf, window._logoBase64, SV_PAGE_W - 52, 1, 38, 20, false);
     }
-    pdf.setFontSize(11);
+    pdf.setFontSize(12);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(...SV_WHITE);
-    pdf.text(svSafe(title), SV_PAGE_W / 2 - 10, 10, { align: 'center' });
+    pdf.text(svSafe(title), SV_PAGE_W / 2, subtitle ? 10 : 13, { align: 'center' });
     if (subtitle) {
-        pdf.setFontSize(7);
+        pdf.setFontSize(8);
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(180, 210, 240);
-        pdf.text(svSafe(subtitle), SV_PAGE_W / 2 - 10, 15, { align: 'center' });
+        pdf.text(svSafe(subtitle), SV_PAGE_W / 2, 17, { align: 'center' });
     }
-    return 24;
+    pdf.setTextColor(0, 0, 0);
+    return 28;
 }
 
 function svNewPage(pdf, title, subtitle) {
     pdf.addPage();
     svAddFooter(pdf);
-    return svAddHeader(pdf, title, subtitle || 'Lightning Protection Survey Report');
+    return svAddHeader(pdf, title, subtitle);
 }
 
-function svSectionBar(pdf, label, x, y, w) {
+function svSectionHeader(pdf, label, x, y, w) {
     pdf.setFillColor(...SV_BLUE);
     pdf.rect(x, y, w, 9, 'F');
     pdf.setFontSize(8.5);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(...SV_WHITE);
-    pdf.text(svSafe(label), x + 4, y + 6.2);
+    pdf.text(label.toUpperCase(), x + 4, y + 6.2);
     pdf.setTextColor(0, 0, 0);
     return y + 9;
 }
 
-function svBuildCover(pdf, d) {
-    const PAGE_W = SV_PAGE_W, MARGIN = SV_MARGIN;
+// ---- Cover Page ----
+function svBuildCoverPage(pdf, d) {
+    const { siteName, siteAddress, surveyDate, surveyorName, clientRepName, signatureData, buildingImage, jobReference } = d;
+
     pdf.setFillColor(...SV_NAVY);
-    pdf.rect(0, 0, PAGE_W, 10, 'F');
+    pdf.rect(0, 0, SV_PAGE_W, 10, 'F');
 
     let y = 14;
     if (window._logoBase64) {
-        const lh = svAddImage(pdf, window._logoBase64, MARGIN + 10, y, PAGE_W - MARGIN * 2 - 20, 32, true);
-        y += lh + 4;
-    }
+        const h = svAddImage(pdf, window._logoBase64, SV_MARGIN + 20, y, 130, 45, true);
+        y += h + 4;
+    } else { y += 20; }
 
-    const bImg = (typeof uploadedImages !== 'undefined') ? uploadedImages['buildingImagePreview_data'] : null;
-    if (bImg) {
-        const ih = svAddImage(pdf, bImg, MARGIN, y, PAGE_W - MARGIN * 2, 70, true);
-        y += ih + 4;
-    }
-
-    y += 2;
-    const cardW = PAGE_W - MARGIN * 2;
+    const cardX = SV_MARGIN;
+    const cardW = SV_PAGE_W - SV_MARGIN * 2;
+    y += 4;
     pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(...SV_NAVY);
-    pdf.text(svSafe(d.siteName || d.jobReference || '-'), PAGE_W / 2, y + 6, { align: 'center' });
+    pdf.text(svSafe(siteName || jobReference || '-'), SV_PAGE_W / 2, y + 6, { align: 'center' });
     y += 10;
 
-    if (d.siteAddress) {
-        const addrLines = pdf.splitTextToSize(svSafe(d.siteAddress), cardW - 10);
+    if (siteAddress) {
+        const addrLines = pdf.splitTextToSize(svSafe(siteAddress), cardW - 10);
         pdf.setFontSize(9);
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(90, 90, 90);
-        pdf.text(addrLines, PAGE_W / 2, y, { align: 'center', lineHeightFactor: 1.5 });
+        pdf.text(addrLines, SV_PAGE_W / 2, y, { align: 'center', lineHeightFactor: 1.5 });
         y += addrLines.length * 5;
     }
     y += 6;
 
+    if (buildingImage) {
+        const remaining = SV_PAGE_BOT - y - 55;
+        const imgH = svAddImage(pdf, buildingImage, cardX, y, cardW, Math.min(80, remaining), true);
+        y += imgH + 6;
+    }
+
+    // Title card
     pdf.setFillColor(25, 45, 65);
-    pdf.rect(MARGIN, y, cardW, 24, 'F');
+    pdf.rect(cardX, y, cardW, 24, 'F');
     pdf.setFontSize(16);
     pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(255, 255, 255);
-    pdf.text('LIGHTNING PROTECTION', PAGE_W / 2, y + 9, { align: 'center' });
+    pdf.setTextColor(...SV_WHITE);
+    pdf.text('LIGHTNING PROTECTION', SV_PAGE_W / 2, y + 9, { align: 'center' });
     pdf.setFontSize(13);
     pdf.setTextColor(230, 160, 40);
-    pdf.text('SURVEY REPORT', PAGE_W / 2, y + 18, { align: 'center' });
+    pdf.text('SURVEY REPORT', SV_PAGE_W / 2, y + 18, { align: 'center' });
     y += 30;
 
+    // Info table — 3 rows
     const rowH = 18;
     const infoH = rowH * 3;
-    pdf.setFillColor(...SV_LIGHT_BLUE);
-    pdf.rect(MARGIN, y, cardW, infoH, 'F');
+    pdf.setFillColor(250, 252, 255);
+    pdf.rect(cardX, y, cardW, infoH, 'F');
     pdf.setDrawColor(...SV_BLUE);
     pdf.setLineWidth(0.5);
-    pdf.rect(MARGIN, y, cardW, infoH);
-    const divX = MARGIN + cardW / 2;
+    pdf.rect(cardX, y, cardW, infoH);
+    const divX = cardX + cardW / 2;
     pdf.setDrawColor(210, 225, 240);
     pdf.setLineWidth(0.3);
     pdf.line(divX, y + 1, divX, y + infoH - 1);
-    [1,2].forEach(i => { pdf.line(MARGIN + 1, y + rowH * i, MARGIN + cardW - 1, y + rowH * i); });
 
-    const col1X = MARGIN + 5;
-    const col2X = MARGIN + cardW / 2 + 5;
+    const col1X = cardX + 5;
+    const col2X = cardX + cardW / 2 + 5;
     const colW  = cardW / 2 - 10;
-    const labelClr = [100, 130, 160];
-    const valueClr = [20, 20, 20];
 
-    function infoCell(label, value, x, fy) {
-        pdf.setFontSize(7); pdf.setFont(undefined, 'normal'); pdf.setTextColor(...labelClr);
+    function infoField(label, value, x, fy) {
+        pdf.setFontSize(7);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(100, 130, 160);
         pdf.text(label.toUpperCase(), x, fy + 4);
-        pdf.setFontSize(10); pdf.setFont(undefined, 'bold'); pdf.setTextColor(...valueClr);
-        const ls = pdf.splitTextToSize(svSafe(value || '-'), colW);
-        pdf.text(ls[0], x, fy + 12);
+        pdf.setFontSize(10);
+        pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(20, 20, 20);
+        const lines = pdf.splitTextToSize(svSafe(value) || '-', colW);
+        pdf.text(lines[0], x, fy + 12);
     }
 
-    infoCell('Job Reference', d.jobReference, col1X, y);
-    infoCell('Date', svFormatDate(d.surveyDate), col2X, y);
-    infoCell('Surveyor', d.surveyorName, col1X, y + rowH);
-    infoCell('Site Representative', d.clientRepName, col2X, y + rowH);
-    infoCell('Standard', d.standardInstalled || '-', col1X, y + rowH * 2);
+    // Row dividers
+    pdf.setDrawColor(210, 225, 240);
+    pdf.setLineWidth(0.3);
+    pdf.line(cardX + 1, y + rowH, cardX + cardW - 1, y + rowH);
+    pdf.line(cardX + 1, y + rowH * 2, cardX + cardW - 1, y + rowH * 2);
 
-    if (d.signatureData) {
-        const sigY = y + rowH * 2;
-        pdf.setFontSize(7); pdf.setFont(undefined, 'normal'); pdf.setTextColor(...labelClr);
-        pdf.text('SITE REP SIGNATURE', col2X, sigY + 4);
-        svAddImage(pdf, d.signatureData, col2X, sigY + 5, colW, rowH - 7, false);
+    infoField('Job Reference',      jobReference,  col1X, y);
+    infoField('Date',               svFormatDate(surveyDate), col2X, y);
+    infoField('Surveyor',           surveyorName,  col1X, y + rowH);
+    infoField('Site Representative',clientRepName, col2X, y + rowH);
+
+    // Signature row
+    pdf.setFontSize(7);
+    pdf.setFont(undefined, 'normal');
+    pdf.setTextColor(100, 130, 160);
+    pdf.text('SITE REPRESENTATIVE SIGNATURE', col1X, y + rowH * 2 + 4);
+    if (signatureData) {
+        svAddImage(pdf, signatureData, col1X, y + rowH * 2 + 6, 60, 10, false);
     }
+    pdf.setTextColor(0, 0, 0);
 
     svAddFooter(pdf);
 }
 
+// ---- Survey Summary Page ----
 function svBuildSummary(pdf, d) {
-    let y = svNewPage(pdf, 'SURVEY SUMMARY');
-    const MARGIN = SV_MARGIN;
-    const W = SV_PAGE_W - MARGIN * 2;
+    let y = svNewPage(pdf, 'SURVEY SUMMARY', 'Lightning Protection Survey Report');
+    const M = SV_MARGIN;
+    const W = SV_PAGE_W - M * 2;
+    const colW = (W - 6) / 2;
+    const col1X = M;
+    const col2X = M + colW + 6;
 
+    // Auto description
     if (d.autoDescription) {
-        y = svSectionBar(pdf, 'STRUCTURE & SYSTEM ASSESSMENT', MARGIN, y, W) + 4;
-        pdf.setFontSize(9); pdf.setFont(undefined, 'normal'); pdf.setTextColor(40, 40, 40);
-        const lines = pdf.splitTextToSize(svSafe(d.autoDescription), W);
-        lines.forEach(ln => {
-            if (y > SV_PAGE_BOT) { y = svNewPage(pdf, 'SURVEY SUMMARY (CONTINUED)'); }
-            pdf.text(ln, MARGIN, y); y += 5;
+        y = svSectionHeader(pdf, 'Structure & System Assessment', M, y, W) + 4;
+        pdf.setFontSize(9);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(40, 40, 40);
+        const lines = pdf.splitTextToSize(svSafe(d.autoDescription), W - 4);
+        lines.forEach(line => {
+            if (y > SV_PAGE_BOT - 10) y = svNewPage(pdf, 'SURVEY SUMMARY (CONTINUED)', 'Lightning Protection Survey Report');
+            pdf.text(line, M + 2, y);
+            y += 5;
         });
         y += 6;
     }
 
-    if (y + 20 > SV_PAGE_BOT) y = svNewPage(pdf, 'SURVEY BREAKDOWN');
-    else y = svSectionBar(pdf, 'SURVEY BREAKDOWN', MARGIN, y, W) + 4;
-
-    const halfW = (W - 6) / 2;
-    const col1 = MARGIN, col2 = MARGIN + halfW + 6;
-
-    let ly = y;
-    pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold'); pdf.setTextColor(...SV_NAVY);
-    pdf.text('SYSTEM OVERVIEW', col1, ly); ly += 6;
-    pdf.setFont(undefined, 'normal'); pdf.setFontSize(8); pdf.setTextColor(40, 40, 40);
-    [d.existingSystem && `System: ${d.existingSystem}`,
-     d.systemCondition && `Condition: ${d.systemCondition}`,
-     d.lastTested && `Last Tested: ${d.lastTested}`,
-     d.standardInstalled && `Standard: ${d.standardInstalled}`
-    ].filter(Boolean).forEach(it => { pdf.text(svSafe(it), col1, ly); ly += 5; });
-    ly += 4;
-
-    pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold'); pdf.setTextColor(...SV_NAVY);
-    pdf.text('STRUCTURE OVERVIEW', col1, ly); ly += 6;
-    pdf.setFont(undefined, 'normal'); pdf.setFontSize(8); pdf.setTextColor(40, 40, 40);
-    [d.structureType && `Type: ${d.structureType}`,
-     d.structureHeight && `Height: ${d.structureHeight}m`,
-     d.numberOfFloors && `Floors: ${d.numberOfFloors}`,
-     d.numberOfOccupants && `Max Occupancy: ${d.numberOfOccupants}`,
-     d.buildingAge && `Age: ${d.buildingAge} years`,
-     d.hasBasement && `Basement: ${d.hasBasement}`,
-     d.roofType && `Roof: ${d.roofType}`,
-     d.roofAccess && `Roof Access: ${d.roofAccess}`
-    ].filter(Boolean).forEach(it => { pdf.text(svSafe(it), col1, ly); ly += 5; });
-
-    let ry = y;
-    pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold'); pdf.setTextColor(...SV_NAVY);
-    pdf.text('VISIBLE SYSTEM COMPONENTS', col2, ry); ry += 6;
-    pdf.setFont(undefined, 'normal'); pdf.setFontSize(8); pdf.setTextColor(40, 40, 40);
-    (d.systemComponents.length > 0 ? d.systemComponents : ['None identified']).forEach(c => {
-        const ls = pdf.splitTextToSize(`• ${c}`, halfW);
-        ls.forEach(ln => { pdf.text(svSafe(ln), col2, ry); ry += 4.5; });
-    });
-    ry += 4;
-
-    pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold'); pdf.setTextColor(...SV_NAVY);
-    pdf.text('STRUCTURE FABRICS', col2, ry); ry += 6;
-    pdf.setFont(undefined, 'normal'); pdf.setFontSize(8); pdf.setTextColor(40, 40, 40);
-    [d.wallTypes.length > 0 && `Walls: ${d.wallTypes.join(', ')}`,
-     d.groundTypes.length > 0 && `Ground: ${d.groundTypes.join(', ')}`
-    ].filter(Boolean).forEach(f => {
-        const ls = pdf.splitTextToSize(svSafe(f), halfW);
-        ls.forEach(ln => { pdf.text(ln, col2, ry); ry += 4.5; });
-    });
-
-    y = Math.max(ly, ry) + 8;
-
-    if (d.riskFactors.length > 0) {
-        if (y + 20 > SV_PAGE_BOT) y = svNewPage(pdf, 'SURVEY BREAKDOWN (CONTINUED)');
-        y = svSectionBar(pdf, 'IDENTIFIED RISK FACTORS', MARGIN, y, W) + 4;
-        pdf.setFontSize(8); pdf.setFont(undefined, 'normal'); pdf.setTextColor(40, 40, 40);
-        const riskW = (W - 6) / 2;
-        d.riskFactors.forEach((rf, i) => {
-            const cx = MARGIN + (i % 2) * (riskW + 6);
-            const rowY = y + Math.floor(i / 2) * 5;
-            if (rowY < SV_PAGE_BOT) pdf.text(svSafe(`• ${rf}`), cx, rowY);
-        });
-        y += Math.ceil(d.riskFactors.length / 2) * 5 + 6;
+    if (y + 60 > SV_PAGE_BOT) {
+        y = svNewPage(pdf, 'SURVEY BREAKDOWN', 'Lightning Protection Survey Report');
+    } else {
+        y = svSectionHeader(pdf, 'Survey Breakdown', M, y + 4, W) + 4;
     }
 
-    if (d.electricalSystems.length > 0) {
-        if (y + 20 > SV_PAGE_BOT) y = svNewPage(pdf, 'SURVEY BREAKDOWN (CONTINUED)');
-        y = svSectionBar(pdf, 'CONNECTED ELECTRICAL SYSTEMS', MARGIN, y, W) + 4;
-        pdf.setFontSize(8); pdf.setFont(undefined, 'normal'); pdf.setTextColor(40, 40, 40);
-        pdf.text('The following systems were identified for surge protection assessment:', MARGIN, y); y += 6;
-        const elW = (W - 6) / 2;
-        d.electricalSystems.forEach((es, i) => {
-            const cx = MARGIN + (i % 2) * (elW + 6);
-            const rowY = y + Math.floor(i / 2) * 5;
-            if (rowY < SV_PAGE_BOT) pdf.text(svSafe(`• ${es}`), cx, rowY);
+    let leftY = y, rightY = y;
+
+    // Left: System Overview
+    pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold'); pdf.setTextColor(...SV_NAVY);
+    pdf.text('SYSTEM OVERVIEW', col1X, leftY); leftY += 7;
+    pdf.setFont(undefined, 'normal'); pdf.setTextColor(40, 40, 40);
+    const sysLines = [];
+    if (d.existingSystem)    sysLines.push('System: ' + d.existingSystem);
+    if (d.systemCondition)   sysLines.push('Condition: ' + d.systemCondition);
+    if (d.lastTested)        sysLines.push('Last Tested: ' + d.lastTested);
+    if (d.standardInstalled) sysLines.push('Standard: ' + d.standardInstalled);
+    if (!sysLines.length)    sysLines.push('No system information recorded');
+    sysLines.forEach(l => { pdf.text(svSafe(l), col1X, leftY); leftY += 6; });
+    leftY += 6;
+
+    // Left: Structure
+    pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold'); pdf.setTextColor(...SV_NAVY);
+    pdf.text('STRUCTURE OVERVIEW', col1X, leftY); leftY += 7;
+    pdf.setFont(undefined, 'normal'); pdf.setTextColor(40, 40, 40);
+    const strLines = [];
+    if (d.structureType)      strLines.push('Type: ' + d.structureType);
+    if (d.structureHeight)    strLines.push('Height: ' + d.structureHeight + 'm');
+    if (d.numberOfFloors)     strLines.push('Floors: ' + d.numberOfFloors);
+    if (d.numberOfOccupants)  strLines.push('Max Occupants: ' + d.numberOfOccupants);
+    if (d.buildingAge)        strLines.push('Age: ' + d.buildingAge + ' years');
+    if (d.hasBasement)        strLines.push('Basement: ' + d.hasBasement);
+    strLines.forEach(l => { pdf.text(svSafe(l), col1X, leftY); leftY += 6; });
+
+    // Right: Visible Components
+    pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold'); pdf.setTextColor(...SV_NAVY);
+    pdf.text('VISIBLE SYSTEM COMPONENTS', col2X, rightY); rightY += 7;
+    pdf.setFont(undefined, 'normal'); pdf.setTextColor(40, 40, 40);
+    if (d.systemComponents && d.systemComponents.length) {
+        d.systemComponents.forEach(c => { pdf.text('• ' + svSafe(c), col2X, rightY); rightY += 6; });
+    } else { pdf.text('None identified', col2X, rightY); rightY += 6; }
+    rightY += 6;
+
+    // Right: Structure Fabrics
+    pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold'); pdf.setTextColor(...SV_NAVY);
+    pdf.text('STRUCTURE FABRICS', col2X, rightY); rightY += 7;
+    pdf.setFont(undefined, 'normal'); pdf.setTextColor(40, 40, 40);
+    if (d.wallTypes && d.wallTypes.length)     { pdf.text(svSafe('Walls: ' + d.wallTypes.join(', ')), col2X, rightY); rightY += 6; }
+    if (d.groundTypes && d.groundTypes.length) { pdf.text(svSafe('Ground: ' + d.groundTypes.join(', ')), col2X, rightY); rightY += 6; }
+    if (d.roofType)    { pdf.text(svSafe('Roof: ' + d.roofType), col2X, rightY); rightY += 6; }
+    if (d.roofAccess)  { pdf.text(svSafe('Roof Access: ' + d.roofAccess), col2X, rightY); rightY += 6; }
+
+    y = Math.max(leftY, rightY) + 10;
+
+    // Risk Factors
+    if (d.riskFactors && d.riskFactors.length) {
+        if (y + 30 > SV_PAGE_BOT) y = svNewPage(pdf, 'SURVEY BREAKDOWN (CONTINUED)', 'Lightning Protection Survey Report');
+        y = svSectionHeader(pdf, 'Identified Risk Factors', M, y, W) + 4;
+        pdf.setFontSize(8.5); pdf.setFont(undefined, 'normal'); pdf.setTextColor(40, 40, 40);
+        const half = Math.ceil(d.riskFactors.length / 2);
+        let rY1 = y, rY2 = y;
+        d.riskFactors.forEach((r, i) => {
+            if (i < half) { pdf.text('• ' + svSafe(r), col1X, rY1); rY1 += 6; }
+            else          { pdf.text('• ' + svSafe(r), col2X, rY2); rY2 += 6; }
         });
-        y += Math.ceil(d.electricalSystems.length / 2) * 5 + 6;
+        y = Math.max(rY1, rY2) + 8;
+    }
+
+    // Electrical Systems
+    if (d.electricalSystems && d.electricalSystems.length) {
+        if (y + 30 > SV_PAGE_BOT) y = svNewPage(pdf, 'SURVEY BREAKDOWN (CONTINUED)', 'Lightning Protection Survey Report');
+        y = svSectionHeader(pdf, 'Connected Electrical Systems', M, y, W) + 4;
+        pdf.setFontSize(8.5); pdf.setFont(undefined, 'normal'); pdf.setTextColor(40, 40, 40);
+        const half = Math.ceil(d.electricalSystems.length / 2);
+        let eY1 = y, eY2 = y;
+        d.electricalSystems.forEach((s, i) => {
+            if (i < half) { pdf.text('• ' + svSafe(s), col1X, eY1); eY1 += 6; }
+            else          { pdf.text('• ' + svSafe(s), col2X, eY2); eY2 += 6; }
+        });
+        y = Math.max(eY1, eY2) + 8;
     }
 }
 
-function svBuildObservations(pdf, d) {
-    if (!d.surveyFindings || !d.surveyFindings.trim()) return;
-    let y = svNewPage(pdf, "ENGINEER'S ADDITIONAL OBSERVATIONS");
-    const MARGIN = SV_MARGIN, W = SV_PAGE_W - MARGIN * 2;
+// ---- Observations Page ----
+function svBuildObservations(pdf, findings) {
+    let y = svNewPage(pdf, "ENGINEER'S ADDITIONAL OBSERVATIONS", 'Lightning Protection Survey Report');
+    const M = SV_MARGIN;
+    const W = SV_PAGE_W - M * 2;
     pdf.setFontSize(9); pdf.setFont(undefined, 'normal'); pdf.setTextColor(40, 40, 40);
-    pdf.splitTextToSize(svSafe(d.surveyFindings), W).forEach(ln => {
-        if (y > SV_PAGE_BOT) y = svNewPage(pdf, "ENGINEER'S OBSERVATIONS (CONTINUED)");
-        pdf.text(ln, MARGIN, y); y += 5;
+    const lines = pdf.splitTextToSize(svSafe(findings), W - 4);
+    lines.forEach(line => {
+        if (y > SV_PAGE_BOT - 10) y = svNewPage(pdf, 'OBSERVATIONS (CONTINUED)', 'Lightning Protection Survey Report');
+        pdf.text(line, M + 2, y);
+        y += 5;
     });
 }
 
+// ---- Photos Page ----
 function svBuildPhotos(pdf, images) {
-    if (!images || images.length === 0) return;
-    let y = svNewPage(pdf, 'SURVEY PHOTOGRAPHS');
-    const MARGIN = SV_MARGIN, imgW = 85, imgH = 62, gap = 6;
-    const col2X = MARGIN + imgW + gap;
+    let y = svNewPage(pdf, 'SURVEY PHOTOGRAPHS', 'Lightning Protection Survey Report');
+    const M = SV_MARGIN;
+    const imgW = 85, imgH = 63, gap = 6;
+    const col1X = M, col2X = M + imgW + gap;
     let count = 0;
     images.forEach(img => {
         if (!img) return;
-        if (count > 0 && count % 6 === 0) y = svNewPage(pdf, 'SURVEY PHOTOGRAPHS (CONTINUED)');
+        if (count > 0 && count % 6 === 0) {
+            y = svNewPage(pdf, 'SURVEY PHOTOGRAPHS (CONTINUED)', 'Lightning Protection Survey Report');
+        }
         const row = Math.floor((count % 6) / 2);
         const col = count % 2;
-        svAddImage(pdf, img, col === 0 ? MARGIN : col2X, y + row * (imgH + gap), imgW, imgH, false);
+        svAddImage(pdf, img, col === 0 ? col1X : col2X, y + row * (imgH + gap), imgW, imgH, false);
         count++;
     });
 }
 
+// ---- Next Steps Page ----
 function svBuildNextSteps(pdf) {
-    let y = svNewPage(pdf, 'RECOMMENDED NEXT STEPS');
-    const MARGIN = SV_MARGIN, W = SV_PAGE_W - MARGIN * 2;
+    let y = svNewPage(pdf, 'RECOMMENDED NEXT STEPS', 'Lightning Protection Survey Report');
+    const M = SV_MARGIN;
+
     const steps = [
-        {t:'intro',   s:'Following this survey, the following actions are recommended:'},
-        {t:'heading', s:'1. Lightning Protection Risk Assessment'},
-        {t:'bullet',  s:'Conduct detailed BS EN 62305-2 risk assessment'},
-        {t:'bullet',  s:'Determine if lightning protection is required'},
-        {t:'bullet',  s:'Calculate the appropriate Lightning Protection Level (LPL)'},
-        {t:'heading', s:'2. Surge Protection Assessment'},
-        {t:'bullet',  s:'Evaluate all identified connected electrical systems'},
-        {t:'bullet',  s:'Specify appropriate SPD requirements per zone'},
-        {t:'bullet',  s:'Design a coordinated surge protection strategy'},
-        {t:'heading', s:'3. System Design & Installation (if required)'},
-        {t:'bullet',  s:'Develop detailed system design to BS EN 62305-3'},
-        {t:'bullet',  s:'Specify installation requirements and materials'},
-        {t:'bullet',  s:'Prepare installation drawings and method statements'},
-        {t:'heading', s:'4. Testing & Commissioning'},
-        {t:'bullet',  s:'Commission system with full electrical testing'},
-        {t:'bullet',  s:'Provide test certificates and documentation'},
-        {t:'bullet',  s:'Establish an ongoing maintenance programme'},
+        [true,  'Following this survey, the following actions are recommended:'],
+        [false, ''],
+        [true,  '1. Lightning Protection Risk Assessment'],
+        [false, '   \u2022 Conduct a detailed BS EN 62305-2 risk assessment'],
+        [false, '   \u2022 Determine if lightning protection is required'],
+        [false, '   \u2022 Calculate Lightning Protection Level (LPL) if needed'],
+        [false, ''],
+        [true,  '2. Surge Protection Assessment'],
+        [false, '   \u2022 Evaluate connected electrical systems identified above'],
+        [false, '   \u2022 Specify appropriate SPD requirements'],
+        [false, '   \u2022 Design a coordinated surge protection strategy'],
+        [false, ''],
+        [true,  '3. System Design & Installation (if required)'],
+        [false, '   \u2022 Develop detailed system design to BS EN 62305-3'],
+        [false, '   \u2022 Specify installation requirements and materials'],
+        [false, '   \u2022 Prepare installation drawings and method statements'],
+        [false, ''],
+        [true,  '4. Testing & Commissioning'],
+        [false, '   \u2022 Commission system with full electrical testing'],
+        [false, '   \u2022 Provide test certificates and documentation'],
+        [false, '   \u2022 Establish an ongoing maintenance programme'],
     ];
-    steps.forEach(step => {
-        if (y > SV_PAGE_BOT - 6) y = svNewPage(pdf, 'RECOMMENDED NEXT STEPS (CONTINUED)');
-        if (step.t === 'intro') {
-            pdf.setFontSize(9); pdf.setFont(undefined, 'italic'); pdf.setTextColor(80,80,80);
-            pdf.text(svSafe(step.s), MARGIN, y); y += 7;
-        } else if (step.t === 'heading') {
-            y += 2; pdf.setFontSize(9.5); pdf.setFont(undefined, 'bold'); pdf.setTextColor(...SV_NAVY);
-            pdf.text(svSafe(step.s), MARGIN, y); y += 6;
-        } else {
-            pdf.setFontSize(8.5); pdf.setFont(undefined, 'normal'); pdf.setTextColor(40,40,40);
-            pdf.splitTextToSize(`    • ${step.s}`, W).forEach(ln => { pdf.text(svSafe(ln), MARGIN, y); y += 5; });
-        }
+
+    steps.forEach(([heading, text]) => {
+        if (y > SV_PAGE_BOT - 10) y = svNewPage(pdf, 'RECOMMENDED NEXT STEPS (CONTINUED)', 'Lightning Protection Survey Report');
+        pdf.setFontSize(heading ? 10 : 9);
+        pdf.setFont(undefined, heading ? 'bold' : 'normal');
+        pdf.setTextColor(...(heading ? SV_NAVY : [40, 40, 40]));
+        if (text) pdf.text(svSafe(text), M + 2, y);
+        y += text ? 6 : 3;
     });
+    pdf.setTextColor(0, 0, 0);
 }
 
+// ---- Main Entry Point ----
 function generateSurveyPDF() {
-    const siteAddress  = document.getElementById('siteAddress')?.value || '';
-    const surveyorName = document.getElementById('surveyorName')?.value || '';
-    if (!siteAddress.trim()) { alert('Please enter a Site Address before generating the report.'); return; }
-    if (!surveyorName.trim()) { alert('Please enter the Surveyor Name before generating the report.'); return; }
+    const siteName       = document.getElementById('siteName')?.value || '';
+    const jobReference   = document.getElementById('jobReference')?.value || '';
+    const siteAddress    = document.getElementById('siteAddress')?.value || '';
+    const surveyDate     = document.getElementById('surveyDate')?.value || '';
+    const surveyorName   = document.getElementById('surveyorName')?.value || '';
+    const clientRepName  = document.getElementById('clientRepName')?.value || '';
+
+    if (!siteAddress.trim() && !siteName.trim()) {
+        alert('Please enter at least a Site Name or Site Address before generating the report.');
+        return;
+    }
+
+    const getChecked = cls => Array.from(document.querySelectorAll('.' + cls + ':checked'))
+        .map(el => { const lbl = document.querySelector(`label[for="${el.id}"]`); return lbl ? lbl.textContent.trim() : ''; })
+        .filter(Boolean);
+
+    const d = {
+        siteName, jobReference, siteAddress, surveyDate, surveyorName, clientRepName,
+        signatureData:     window.clientSignature ? window.clientSignature.getSignatureData() : null,
+        buildingImage:     window.uploadedImages['buildingImagePreview_data'] || null,
+        structureType:     document.getElementById('structureType')?.value || '',
+        structureHeight:   document.getElementById('structureHeight')?.value || '',
+        buildingAge:       document.getElementById('buildingAge')?.value || '',
+        numberOfFloors:    document.getElementById('numberOfFloors')?.value || '',
+        numberOfOccupants: document.getElementById('numberOfOccupants')?.value || '',
+        hasBasement:       document.getElementById('hasBasement')?.value || '',
+        roofType:          document.getElementById('roofType')?.value || '',
+        roofAccess:        document.getElementById('roofAccess')?.value || '',
+        existingSystem:    document.getElementById('existingSystem')?.value || '',
+        systemCondition:   document.getElementById('systemCondition')?.value || '',
+        lastTested:        document.getElementById('lastTested')?.value || '',
+        standardInstalled: document.getElementById('standardInstalled')?.value || '',
+        surveyFindings:    document.getElementById('surveyFindings')?.value || '',
+        groundTypes:        getChecked('ground-checkbox'),
+        wallTypes:          getChecked('wall-checkbox'),
+        systemComponents:   getChecked('system-checkbox'),
+        riskFactors:        getChecked('risk-checkbox'),
+        electricalSystems:  getChecked('electrical-checkbox'),
+        surveyPhotos:       window.uploadedImages['additionalPhotosPreview_data'] || null,
+        autoDescription:    typeof generateAutoDescription === 'function' ? generateAutoDescription() : '',
+    };
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
 
-    const siteName          = document.getElementById('siteName')?.value || '';
-    const jobReference      = document.getElementById('jobReference')?.value || '';
-    const surveyDate        = document.getElementById('surveyDate')?.value || '';
-    const clientRepName     = document.getElementById('clientRepName')?.value || '';
-    const structureType     = document.getElementById('structureType')?.value || '';
-    const structureHeight   = document.getElementById('structureHeight')?.value || '';
-    const buildingAge       = document.getElementById('buildingAge')?.value || '';
-    const numberOfFloors    = document.getElementById('numberOfFloors')?.value || '';
-    const numberOfOccupants = document.getElementById('numberOfOccupants')?.value || '';
-    const hasBasement       = document.getElementById('hasBasement')?.value || '';
-    const roofType          = document.getElementById('roofType')?.value || '';
-    const roofAccess        = document.getElementById('roofAccess')?.value || '';
-    const existingSystem    = document.getElementById('existingSystem')?.value || '';
-    const systemCondition   = document.getElementById('systemCondition')?.value || '';
-    const lastTested        = document.getElementById('lastTested')?.value || '';
-    const standardInstalled = document.getElementById('standardInstalled')?.value || '';
-    const surveyFindings    = document.getElementById('surveyFindings')?.value || '';
-
-    const groundTypes       = getSelectedCheckboxes('ground-checkbox');
-    const wallTypes         = getSelectedCheckboxes('wall-checkbox');
-    const systemComponents  = getSelectedCheckboxes('system-checkbox');
-    const riskFactors       = getSelectedCheckboxes('risk-checkbox');
-    const electricalSystems = getSelectedCheckboxes('electrical-checkbox');
-    const signatureData     = window.clientSignature ? window.clientSignature.getSignatureData() : null;
-    const autoDescription   = generateAutoDescription();
-    const imgs = typeof uploadedImages !== 'undefined' ? uploadedImages : {};
-
-    const coverData = {
-        siteName, jobReference, siteAddress, surveyDate, surveyorName,
-        clientRepName, standardInstalled, signatureData
-    };
-
-    const summaryData = {
-        autoDescription, existingSystem, systemCondition, lastTested, standardInstalled,
-        structureType, structureHeight, numberOfFloors, numberOfOccupants, buildingAge,
-        hasBasement, roofType, roofAccess,
-        groundTypes, wallTypes, systemComponents, riskFactors, electricalSystems
-    };
-
-    let photos = [];
-    const rawPhotos = imgs['additionalPhotosPreview_data'];
-    if (rawPhotos) photos = Array.isArray(rawPhotos) ? rawPhotos : [rawPhotos];
-
-    svBuildCover(pdf, coverData);
-    svBuildSummary(pdf, summaryData);
-    svBuildObservations(pdf, { surveyFindings });
-    if (photos.length > 0) svBuildPhotos(pdf, photos);
+    svBuildCoverPage(pdf, d);
+    svBuildSummary(pdf, d);
+    if (d.surveyFindings.trim()) svBuildObservations(pdf, d.surveyFindings);
+    const photos = Array.isArray(d.surveyPhotos) ? d.surveyPhotos : (d.surveyPhotos ? [d.surveyPhotos] : []);
+    if (photos.length) svBuildPhotos(pdf, photos);
     svBuildNextSteps(pdf);
 
-    const namePart = (siteName || jobReference || 'Report').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
+    const namePart = (siteName || jobReference || 'Survey').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
     const datePart = svFormatDate(surveyDate);
     pdf.save(`Lightning Protection Survey Report - ${namePart} ${datePart}.pdf`);
 }
