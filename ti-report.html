@@ -51,9 +51,15 @@
         </div>
         <div class="form-row">
             <div class="form-group">
+                <label for="siteName">Site Name:</label>
+                <input type="text" id="siteName" placeholder="e.g. Upper Norwood Library...">
+            </div>
+            <div class="form-group">
                 <label for="jobReference">Job Reference:</label>
                 <input type="text" id="jobReference" placeholder="Enter job reference...">
             </div>
+        </div>
+        <div class="form-row">
             <div class="form-group">
                 <label for="siteStaffName">Site Staff Name:</label>
                 <input type="text" id="siteStaffName" placeholder="Enter site staff name...">
@@ -530,7 +536,7 @@ const SECTION_IDS = ['sec-site','sec-standard','sec-selected','sec-recommendatio
 
 // Fields to watch per section for status dot
 const SECTION_FIELDS = {
-    'sec-site':            ['siteAddress','testDate','engineerName','testKitRef','jobReference','siteStaffName'],
+    'sec-site':            ['siteName','siteAddress','testDate','engineerName','testKitRef','jobReference','siteStaffName'],
     'sec-standard':        ['standard'],
     'sec-selected':        [], // dynamic content — watch selectedFailures div
     'sec-recommendations': ['generalComments'],
