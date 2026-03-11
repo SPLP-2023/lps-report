@@ -339,7 +339,7 @@ function renderSelectedRepairs() {
     const container = document.getElementById('selectedRepairsContainer');
     if (!container) return;
     if (!window.selectedRepairs.length) {
-        container.innerHTML = '<p style="color:#888;font-style:italic;font-size:13px;">No repairs selected yet.</p>';
+        container.innerHTML = '<p style="color:#888;font-style:italic;font-size:13px;">No repairs selected yet. Tick repairs in the section above.</p>';
         return;
     }
     container.innerHTML = window.selectedRepairs.map((r, i) => {
@@ -348,11 +348,23 @@ function renderSelectedRepairs() {
         const photoNote = imgCount > 0
             ? `<div class="rm-tag-photos">📷 ${imgCount} photo${imgCount > 1 ? 's' : ''} attached</div>`
             : '';
+        // Custom repairs show their photo uploader here; catalogue repairs show it in the list above
+        const uploadRow = r.custom ? `
+            <div class="rm-photo-row" style="margin-top:8px;">
+                <span class="rm-photo-label">📷 Photos:</span>
+                <label class="rm-photo-btn" for="custom-img-${r.id}">
+                    Add photos
+                    <input type="file" id="custom-img-${r.id}" accept="image/*" multiple style="display:none;"
+                        onchange="handleRepairImages(this, '${r.id}')">
+                </label>
+                <span id="repair-img-preview-${r.id}" class="rm-photo-count">${imgCount > 0 ? '✓ ' + imgCount + ' photo(s)' : ''}</span>
+            </div>` : '';
         return `
             <div class="rm-selected-tag">
                 <div class="rm-tag-text">
                     <strong>${i + 1}.</strong> ${r.text}
                     ${photoNote}
+                    ${uploadRow}
                 </div>
                 <button class="rm-tag-remove" onclick="removeSelectedRepair('${r.id}')" title="Remove">×</button>
             </div>`;
