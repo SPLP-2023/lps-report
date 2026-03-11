@@ -13,13 +13,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initialize touch signature
-    clientSignature = new TouchSignature(
+    clientSignature = createTouchSignature(
         'signatureCanvas',
-        'clearSignature',
+        'clearSignature', 
         'saveSignature',
         'signatureStatus'
     );
-    window.clientSignature = clientSignature;
 });
 
 // Get selected checkboxes for any category
@@ -186,11 +185,10 @@ function generateAutoDescription() {
 function clearSurveyData() {
     if (confirm('Are you sure you want to clear all survey data and start a new report?')) {
         // Clear basic fields
-        document.getElementById('siteName').value = '';
         document.getElementById('siteAddress').value = '';
         document.getElementById('surveyDate').valueAsDate = new Date();
         document.getElementById('surveyorName').value = '';
-        if (document.getElementById('clientRepName')) document.getElementById('clientRepName').value = '';
+        document.getElementById('clientRepName').value = '';
         
         // Clear structure fields
         document.getElementById('structureType').value = '';
@@ -224,10 +222,10 @@ function clearSurveyData() {
         }
         
         // Clear uploaded images
-        uploadedImages = {};
+        window.uploadedImages = {};
         
         document.getElementById('buildingImagePreview').textContent = 'Click to upload building photo';
-        document.getElementById('additionalPhotosPreview').textContent = 'Click to upload additional photos';
+        document.getElementById('additionalPhotosPreview').textContent = 'Click to upload survey photos';
         
         console.log('Survey form cleared');
     }
@@ -237,7 +235,6 @@ function clearSurveyData() {
 function getSurveyData() {
     return {
         // Basic information
-        siteName: document.getElementById('siteName')?.value || '',
         jobReference: document.getElementById('jobReference')?.value || '',
         siteAddress: document.getElementById('siteAddress')?.value || '',
         surveyDate: document.getElementById('surveyDate')?.value || '',
