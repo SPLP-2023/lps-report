@@ -1,6 +1,6 @@
 // =============================================================================
 // remedial-pdf.js — Remedial Report PDF Generator
-// Layout exactly mirrors ti-pdf-generator.js: same header, footer, cover page
+// Exact T&I layout. Per-repair photos shown inline under each repair item.
 // =============================================================================
 
 const RM_NAVY        = [13, 27, 42];
@@ -73,14 +73,14 @@ function rmAddFooterToPage(pdf) {
     pdf.setTextColor(0, 0, 0);
 }
 
-// ---- EXACT COPY of T&I newPage ----
+// ---- newPage ----
 function rmNewPage(pdf, title, subtitle) {
     pdf.addPage();
     rmAddFooterToPage(pdf);
     return rmAddPageHeader(pdf, title, subtitle);
 }
 
-// ---- Section header bar ----
+// ---- Blue section header bar ----
 function rmSectionHeader(pdf, label, x, y, w) {
     pdf.setFillColor(...RM_BLUE);
     pdf.rect(x, y, w, 9, 'F');
@@ -107,17 +107,17 @@ function rmFormatDateShort(dateStr) {
 }
 
 // ===================== COVER PAGE =====================
-// Exact T&I order: navy bar → logo centred → building photo → site name/address → title card → info table → footer
+// Exact T&I order: narrow navy bar → logo centred → building photo → site name/address → title card → info table → footer
 
 function rmBuildCoverPage(pdf, data) {
     const { siteName, siteAddress, remedialDate, remedialEngineer, siteStaffName,
             signatureData, buildingImage, jobReference } = data;
 
-    // Top navy bar
+    // Thin top navy bar
     pdf.setFillColor(...RM_NAVY);
     pdf.rect(0, 0, RM_PAGE_W, 10, 'F');
 
-    // Company logo centred — same as T&I
+    // Logo centred — x=MARGIN, maxW=PAGE_W-MARGIN*2, maxH=50, centred=true (exact T&I)
     let y = 14;
     try {
         if (window._logoBase64) {
@@ -126,7 +126,7 @@ function rmBuildCoverPage(pdf, data) {
         } else { y += 56; }
     } catch (e) { y += 56; }
 
-    // Building image — same as T&I
+    // Building image — same T&I call
     if (buildingImage) {
         try {
             const imgH = rmAddImageToPDF(pdf, buildingImage, RM_MARGIN, y, RM_PAGE_W - RM_MARGIN * 2, 65, true);
@@ -134,7 +134,7 @@ function rmBuildCoverPage(pdf, data) {
         } catch (e) { y += 6; }
     }
 
-    // Site name and address — below image
+    // Site name + address block (below image — same as T&I)
     const cardX = RM_MARGIN;
     const cardW = RM_PAGE_W - RM_MARGIN * 2;
     const addrBlock = siteAddress ? pdf.splitTextToSize(rmSafe(siteAddress), cardW - 10) : [];
@@ -169,7 +169,7 @@ function rmBuildCoverPage(pdf, data) {
     pdf.text('REMEDIAL REPORT', RM_PAGE_W / 2, y + 18, { align: 'center' });
     y += cardH + 6;
 
-    // Info table — 3 rows x 2 cols
+    // Info table — 3 rows x 2 cols (same as T&I)
     const rowH = 18;
     const infoH = rowH * 3;
     pdf.setFillColor(250, 252, 255);
@@ -206,12 +206,12 @@ function rmBuildCoverPage(pdf, data) {
     pdf.line(cardX + 1, y + rowH, cardX + cardW - 1, y + rowH);
     pdf.line(cardX + 1, y + rowH * 2, cardX + cardW - 1, y + rowH * 2);
 
-    infoField('Job Reference',     jobReference,   col1X, y);
+    infoField('Job Reference',     jobReference,       col1X, y);
     infoField('Date',              rmFormatDate(remedialDate), col2X, y);
-    infoField('Remedial Engineer', remedialEngineer, col1X, y + rowH);
-    infoField('Site Staff',        siteStaffName,  col2X, y + rowH);
+    infoField('Remedial Engineer', remedialEngineer,   col1X, y + rowH);
+    infoField('Site Staff',        siteStaffName,      col2X, y + rowH);
 
-    // Signature row
+    // Row 3: signature
     pdf.setFontSize(7);
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(...labelColor);
@@ -225,20 +225,29 @@ function rmBuildCoverPage(pdf, data) {
 }
 
 // ===================== REMEDIAL WORKS PAGE =====================
+// Each repair shows as a numbered entry with any attached photos inline below it
 
 function rmBuildWorks(pdf, data) {
     let y = rmNewPage(pdf, 'REMEDIAL WORKS', 'Lightning Protection Remedial Report');
     const M = RM_MARGIN;
     const W = RM_PAGE_W - M * 2;
 
-    // Selected Repairs
     if (data.selectedRepairs && data.selectedRepairs.length) {
         y = rmSectionHeader(pdf, 'Works Carried Out', M, y, W) + 6;
 
         data.selectedRepairs.forEach((repair, i) => {
-            if (y + 18 > RM_PAGE_BOT) y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+            // Estimate height needed for this repair block
+            const repairLines = pdf.splitTextToSize(rmSafe(repair.text), W - 12);
+            const photos = data.repairImages[repair.id] || [];
+            const photoRows = Math.ceil(photos.length / 3);
+            const photoBlockH = photoRows * 46; // ~42mm per photo row + gap
+            const estimatedH  = (repairLines.length * 5.5) + photoBlockH + 14;
 
-            // Numbered bullet
+            if (i > 0 && y + estimatedH > RM_PAGE_BOT) {
+                y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+            }
+
+            // Numbered circle bullet
             pdf.setFillColor(...RM_BLUE);
             pdf.circle(M + 3.5, y - 1.5, 3.5, 'F');
             pdf.setFontSize(8);
@@ -247,18 +256,46 @@ function rmBuildWorks(pdf, data) {
             pdf.text(String(i + 1), M + 3.5, y - 0.5, { align: 'center' });
             pdf.setTextColor(0, 0, 0);
 
+            // Repair text
             pdf.setFontSize(9.5);
             pdf.setFont(undefined, 'normal');
             pdf.setTextColor(30, 30, 30);
-            const lines = pdf.splitTextToSize(rmSafe(repair.text), W - 12);
-            lines.forEach((line, li) => {
-                if (li > 0 && y > RM_PAGE_BOT - 8) y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+            repairLines.forEach((line, li) => {
+                if (li > 0 && y > RM_PAGE_BOT - 8) {
+                    y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+                }
                 pdf.text(line, M + 10, y);
                 y += 5.5;
             });
-            y += 4;
+            y += 3;
+
+            // Inline photos for this repair — 3 per row, 55mm wide, 40mm tall
+            if (photos.length) {
+                const imgW = 55, imgH = 40, gap = 4;
+                const perRow = 3;
+                let col = 0, rowStartY = y;
+
+                photos.forEach((imgData, pi) => {
+                    if (col === perRow) {
+                        col = 0;
+                        rowStartY = y;
+                    }
+                    if (col === 0 && pi > 0) y += imgH + gap + 2;
+                    if (y + imgH > RM_PAGE_BOT) {
+                        y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+                        rowStartY = y;
+                    }
+                    const xPos = M + 10 + col * (imgW + gap);
+                    rmAddImageToPDF(pdf, imgData, xPos, rowStartY, imgW, imgH, false);
+                    col++;
+                });
+
+                y = rowStartY + imgH + 6;
+            }
+
+            y += 5;
         });
-        y += 6;
+        y += 4;
     }
 
     // Additional Repairs
@@ -289,37 +326,17 @@ function rmBuildWorks(pdf, data) {
     }
 }
 
-// ===================== REMEDIAL IMAGES =====================
-
-function rmBuildImages(pdf, images) {
-    let y = rmNewPage(pdf, 'REMEDIAL WORK PHOTOGRAPHS', 'Lightning Protection Remedial Report');
-    const M = RM_MARGIN;
-    const imgW = 85, imgH = 63, gap = 6;
-    const col1X = M, col2X = M + imgW + gap;
-    let count = 0;
-    images.forEach(img => {
-        if (!img) return;
-        if (count > 0 && count % 6 === 0) {
-            y = rmNewPage(pdf, 'REMEDIAL PHOTOGRAPHS (CONTINUED)', 'Lightning Protection Remedial Report');
-        }
-        const row = Math.floor((count % 6) / 2);
-        const col = count % 2;
-        rmAddImageToPDF(pdf, img, col === 0 ? col1X : col2X, y + row * (imgH + gap), imgW, imgH, false);
-        count++;
-    });
-}
-
 // ===================== MAIN ENTRY POINT =====================
 
 function generateRemedialPDF() {
-    const siteName        = document.getElementById('siteName')?.value || '';
-    const jobReference    = document.getElementById('jobReference')?.value || '';
-    const siteAddress     = document.getElementById('siteAddress')?.value || '';
-    const remedialDate    = document.getElementById('remedialDate')?.value || '';
-    const remedialEngineer= document.getElementById('remedialEngineer')?.value || '';
-    const siteStaffName   = document.getElementById('siteStaffName')?.value || '';
+    const siteName         = document.getElementById('siteName')?.value || '';
+    const jobReference     = document.getElementById('jobReference')?.value || '';
+    const siteAddress      = document.getElementById('siteAddress')?.value || '';
+    const remedialDate     = document.getElementById('remedialDate')?.value || '';
+    const remedialEngineer = document.getElementById('remedialEngineer')?.value || '';
+    const siteStaffName    = document.getElementById('siteStaffName')?.value || '';
     const additionalRepairs = document.getElementById('additionalRepairs')?.value || '';
-    const completionNotes = document.getElementById('completionNotes')?.value || '';
+    const completionNotes  = document.getElementById('completionNotes')?.value || '';
 
     if (!siteAddress.trim() && !siteName.trim()) {
         alert('Please enter at least a Site Name or Site Address before generating the report.');
@@ -329,13 +346,21 @@ function generateRemedialPDF() {
         if (!confirm('No repairs have been selected. Continue anyway?')) return;
     }
 
+    // Build repairImages map: id -> array of base64 strings
+    const repairImages = {};
+    (window.selectedRepairs || []).forEach(r => {
+        const imgs = window.imageStore['repair-' + r.id];
+        if (imgs) repairImages[r.id] = Array.isArray(imgs) ? imgs : [imgs];
+        else repairImages[r.id] = [];
+    });
+
     const data = {
         siteName, jobReference, siteAddress, remedialDate, remedialEngineer, siteStaffName,
         additionalRepairs, completionNotes,
         signatureData:   window.siteStaffSignature ? window.siteStaffSignature.getSignatureData() : null,
-        buildingImage:   window.uploadedImages['buildingImagePreview_data'] || null,
+        buildingImage:   window.imageStore['building'] || null,
         selectedRepairs: window.selectedRepairs || [],
-        remedialImages:  window.uploadedImages['remedialImagesPreview_data'] || null,
+        repairImages,
     };
 
     const { jsPDF } = window.jspdf;
@@ -343,8 +368,6 @@ function generateRemedialPDF() {
 
     rmBuildCoverPage(pdf, data);
     rmBuildWorks(pdf, data);
-    const imgs = Array.isArray(data.remedialImages) ? data.remedialImages : (data.remedialImages ? [data.remedialImages] : []);
-    if (imgs.length) rmBuildImages(pdf, imgs);
 
     const namePart = (siteName || jobReference || 'Remedial').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
     pdf.save(`Lightning Protection Remedial Report - ${namePart} ${rmFormatDateShort(remedialDate)}.pdf`);
