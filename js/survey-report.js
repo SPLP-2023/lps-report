@@ -19,6 +19,11 @@ document.addEventListener('DOMContentLoaded', function() {
         'saveSignature',
         'signatureStatus'
     );
+    // Expose on window so autosave can access it
+    window.surveyClientSignature = clientSignature;
+
+    // Start auto-save (must be after signature init)
+    initSurveyAutoSave();
 });
 
 // Get selected checkboxes for any category
@@ -295,4 +300,71 @@ function validateSurveyData() {
     }
     
     return true;
+}
+
+// ===================== AUTO-SAVE CONFIG =====================
+// Called from DOMContentLoaded after signature is ready
+function initSurveyAutoSave() {
+    initAutoSave({
+        storageKey: 'splp_survey_autosave_v1',
+        fields: [
+            'siteName','jobReference','siteAddress','surveyDate','surveyorName','clientRepName',
+            'structureType','structureHeight','buildingAge','numberOfFloors','numberOfOccupants',
+            'hasBasement','roofType','roofAccess','existingSystem','systemCondition',
+            'lastTested','standardInstalled','surveyFindings'
+        ],
+        checkboxes: [
+            'groundGravel','groundGrass','groundSoil','groundBlockPaving','groundTarmac',
+            'groundConcrete','groundResinGravel',
+            'wallBrick','wallConcrete','wallSteel','wallWood','wallMetal','wallGlass',
+            'wallStone','wallComposite',
+            'airTerminalsPresent','downConductorsVisible','earthSystemAccessible',
+            'spdInstallation','testRecordsAvailable','asInstalledAvailable',
+            'testClamps','bondingVisible',
+            'heightRisk','isolationRisk','hilltopRisk','metalRoof','flammableRisk',
+            'occupancyRisk','electronicRisk','historicRisk','explosiveRisk',
+            'criticalInfrastructure','previousDamage','nearbyUtilities','waterExposure',
+            'externalTanks','crowdedArea','meteorologicalRisk',
+            'powerLV','powerHV','emergencyPower','telecomData','internet','cctv',
+            'fireAlarm','securityAlarm','accessControl','externalLighting',
+            'emergencyLighting','signageLighting','hvacControls','buildingManagement',
+            'liftSystems','industrialControls','medicalEquipment','serverRoom'
+        ],
+        signature: 'surveyClientSignature',
+        dateFields: ['surveyDate'],
+        onSave: () => {
+            // Save images from window.uploadedImages
+            const imgs = {};
+            const ui = window.uploadedImages || {};
+            if (ui['buildingImagePreview_data']) imgs['buildingImagePreview_data'] = ui['buildingImagePreview_data'];
+            if (ui['additionalPhotosPreview_data']) imgs['additionalPhotosPreview_data'] = ui['additionalPhotosPreview_data'];
+            return { _images: imgs };
+        },
+        onRestore: (d) => {
+            if (d._images) {
+                window.uploadedImages = window.uploadedImages || {};
+                if (d._images['buildingImagePreview_data']) {
+                    window.uploadedImages['buildingImagePreview_data'] = d._images['buildingImagePreview_data'];
+                    const el = document.getElementById('buildingImagePreview');
+                    if (el) el.textContent = '✓ Building image restored';
+                }
+                if (d._images['additionalPhotosPreview_data']) {
+                    window.uploadedImages['additionalPhotosPreview_data'] = d._images['additionalPhotosPreview_data'];
+                    const arr = d._images['additionalPhotosPreview_data'];
+                    const el = document.getElementById('additionalPhotosPreview');
+                    if (el) el.textContent = '✓ ' + (Array.isArray(arr) ? arr.length : 1) + ' photo(s) restored';
+                }
+            }
+            if (typeof updateAllDots === 'function') setTimeout(updateAllDots, 200);
+        },
+        clearExtra: () => {
+            window.uploadedImages = {};
+            const bp = document.getElementById('buildingImagePreview');
+            if (bp) bp.textContent = 'Click to upload building photo';
+            const ap = document.getElementById('additionalPhotosPreview');
+            if (ap) ap.textContent = 'Click to upload survey photos';
+            if (clientSignature && typeof clientSignature.reset === 'function') clientSignature.reset();
+            if (typeof updateAllDots === 'function') updateAllDots();
+        }
+    });
 }
