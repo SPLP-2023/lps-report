@@ -299,9 +299,6 @@ function rmBuildWorks(pdf, data) {
 
             y += 5;
         });
-
-            y += 5;
-        });
         y += 4;
     }
 
