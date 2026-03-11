@@ -241,26 +241,30 @@ function buildCoverPage(pdf, data) {
     pdf.text('TEST & INSPECTION REPORT', PAGE_W / 2, logoY + 18, { align: 'center' });
     logoY += cardH + 4;
 
-    // Job Reference + Address block (centred, between title card and info table)
-    logoY += 5;
+    // Job Reference + Address block — evenly spaced between title card and info table
+    const addrBlock = siteAddress ? pdf.splitTextToSize(siteAddress, cardW - 10) : [];
+    const blockH = 8 + (addrBlock.length * 5); // title line + address lines
+    const gapH = 14; // total breathing room split above and below
+    const topPad = Math.round(gapH / 2);
+
+    logoY += topPad;
     pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(...NAVY);
     pdf.text(jobReference || '-', PAGE_W / 2, logoY + 6, { align: 'center' });
     logoY += 10;
 
-    if (siteAddress) {
+    if (addrBlock.length > 0) {
         pdf.setFontSize(9);
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(90, 90, 90);
-        const addrBlock = pdf.splitTextToSize(siteAddress, cardW - 10);
         pdf.text(addrBlock, PAGE_W / 2, logoY, { align: 'center', lineHeightFactor: 1.5 });
-        logoY += addrBlock.length * 5 + 4;
-    } else {
-        logoY += 6;
+        logoY += addrBlock.length * 5;
     }
 
-    // Info card — 3 rows: Job Ref/Date, Engineer/Kit Ref, Site Staff/Signature
+    logoY += gapH - topPad + 2;
+
+    // Info card — 3 rows: Site Name/Date, Engineer/Kit Ref, Site Staff/Signature
     const rowH = 18;
     const infoH = rowH * 3;
 
@@ -295,9 +299,9 @@ function buildCoverPage(pdf, data) {
     }
 
     const tableRows = [
-        [['Job Reference', jobReference], ['Date', formatDate(testDate)]],
-        [['Engineer',      engineerName], ['Test Kit Ref', testKitRef]],
-        [['Site Staff',    siteStaffName], null],
+        [['Site Name',  jobReference], ['Date', formatDate(testDate)]],
+        [['Engineer',   engineerName], ['Test Kit Ref', testKitRef]],
+        [['Site Staff', siteStaffName], null],
     ];
 
     let iy = logoY;
@@ -396,79 +400,86 @@ function buildInspectionSummary(pdf, data, pageTitle) {
     if (hasFaults) {
         y = drawSectionHeader(pdf, 'DEFECTS', MARGIN, y, PAGE_W - MARGIN * 2) + 3;
 
-        let leftY = y, rightY = y;
-        let col = 'left';
-        let imagesOnPage = 0;
+        const rowW     = PAGE_W - MARGIN * 2;
+        const imgW     = 65;
+        const imgH     = 50;
+        const dataW    = rowW - imgW - 6;
+        const dataX    = MARGIN;
+        const imgX     = MARGIN + dataW + 6;
 
         selectedFailures.forEach((failure, idx) => {
-            const x = col === 'left' ? COL_L : COL_R;
-            let cy = col === 'left' ? leftY : rightY;
 
-            const commentLines = failure.comment ? pdf.splitTextToSize('Comment: ' + failure.comment, COL_W) : [];
-            const estimated = 30 + (commentLines.length * 4) + (failure.imageData ? 55 : 0);
+            // Pre-calculate text lines to estimate row height
+            pdf.setFontSize(9);
+            const titleLines = pdf.splitTextToSize(`${idx + 1}. ${failure.failure}`, dataW);
+            pdf.setFontSize(7);
+            const refLines = pdf.splitTextToSize('Ref: ' + (failure.reference || ''), dataW);
+            pdf.setFontSize(8);
+            const reqLines = pdf.splitTextToSize('Requirement: ' + (failure.requirement || ''), dataW);
+            const commentLines = failure.comment ? pdf.splitTextToSize('Comment: ' + failure.comment, dataW) : [];
 
-            if (cy + estimated > PAGE_BOT) {
+            const textH = (titleLines.length * 5)
+                        + (refLines.length * 4)
+                        + (reqLines.length * 4)
+                        + (commentLines.length * 4)
+                        + 14;
+            const rowH = failure.imageData ? Math.max(textH, imgH + 4) : textH;
+
+            // New page if row won't fit
+            if (y + rowH > PAGE_BOT) {
                 pdf.addPage();
                 addFooterToPage(pdf);
                 y = addPageHeader(pdf, 'INSPECTION SUMMARY (CONTINUED)', 'BS EN 62305 | Test & Inspection');
-                leftY = y; rightY = y; col = 'left'; imagesOnPage = 0;
-                cy = y;
+                y = drawSectionHeader(pdf, 'DEFECTS (CONTINUED)', MARGIN, y, PAGE_W - MARGIN * 2) + 3;
             }
 
-            // Failure number + name
+            // Light background for row
+            pdf.setFillColor(248, 250, 253);
+            pdf.rect(MARGIN, y, rowW, rowH, 'F');
+            pdf.setDrawColor(220, 230, 240);
+            pdf.setLineWidth(0.2);
+            pdf.rect(MARGIN, y, rowW, rowH);
+
+            // --- Data (left) ---
+            let dy = y + 5;
+
             pdf.setFontSize(9);
             pdf.setFont(undefined, 'bold');
             pdf.setTextColor(0, 0, 0);
-            const titleLines = pdf.splitTextToSize(`${idx + 1}. ${failure.failure}`, COL_W);
-            pdf.text(titleLines, x, cy);
-            cy += titleLines.length * 4.5 + 2;
+            pdf.text(titleLines, dataX + 2, dy);
+            dy += titleLines.length * 5 + 2;
 
-            // Reference
             pdf.setFontSize(7);
             pdf.setFont(undefined, 'italic');
             pdf.setTextColor(100, 100, 100);
-            const refLines = pdf.splitTextToSize('Ref: ' + failure.reference, COL_W);
-            pdf.text(refLines, x, cy);
-            cy += refLines.length * 3.5 + 2;
+            pdf.text(refLines, dataX + 2, dy);
+            dy += refLines.length * 4 + 2;
 
-            // Requirement
-            pdf.setFont(undefined, 'bold');
             pdf.setFontSize(8);
+            pdf.setFont(undefined, 'bold');
             pdf.setTextColor(...BLUE_ACCENT);
-            const reqLines = pdf.splitTextToSize('Requirement: ' + failure.requirement, COL_W);
-            pdf.text(reqLines, x, cy);
-            cy += reqLines.length * 3.5 + 3;
+            pdf.text(reqLines, dataX + 2, dy);
+            dy += reqLines.length * 4 + 2;
             pdf.setTextColor(0, 0, 0);
 
-            // Comment
             if (failure.comment) {
                 pdf.setFont(undefined, 'normal');
                 pdf.setFontSize(8);
-                pdf.text(commentLines, x, cy);
-                cy += commentLines.length * 4 + 3;
+                pdf.setTextColor(60, 60, 60);
+                pdf.text(commentLines, dataX + 2, dy);
             }
 
-            // Image
-            if (failure.imageData && imagesOnPage < 6) {
+            // --- Image (right) ---
+            if (failure.imageData) {
                 try {
-                    const imgH = addImageToPDF(pdf, failure.imageData, x, cy, 60, 45);
-                    cy += imgH + 3;
-                    imagesOnPage++;
+                    addImageToPDF(pdf, failure.imageData, imgX, y + 2, imgW, imgH, false);
                 } catch (e) { /* */ }
             }
 
-            cy += 6;
-            // Divider line between defects
-            pdf.setDrawColor(220, 230, 240);
-            pdf.setLineWidth(0.2);
-            pdf.line(x, cy - 3, x + COL_W, cy - 3);
-            pdf.setDrawColor(0, 0, 0);
-
-            if (col === 'left') { leftY = cy; col = 'right'; }
-            else { rightY = cy; col = 'left'; }
+            y += rowH + 3;
         });
 
-        y = Math.max(leftY, rightY) + 4;
+        y += 4;
     } else {
         pdf.setFontSize(16);
         pdf.setFont(undefined, 'bold');
