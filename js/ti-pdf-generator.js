@@ -59,7 +59,7 @@ function addImageToPDF(pdf, imageData, x, y, maxWidth, maxHeight, centerAlign = 
 }
 
 /**
- * Draw the inner page header: full-width navy bar with logo left, title centred.
+ * Draw the inner page header: full-width navy bar with logo right, title centred.
  * Returns Y position after header.
  */
 function addPageHeader(pdf, title, subtitle) {
@@ -67,9 +67,9 @@ function addPageHeader(pdf, title, subtitle) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, barH, 'F');
 
-    // Logo on left — preloaded via fetch() as base64, no canvas so transparency preserved
+    // Logo on right — preloaded via fetch() as base64, no canvas so transparency preserved
     try {
-        if (window._logoBase64) addImageToPDF(pdf, window._logoBase64, 2, 1, 30, 16, false);
+        if (window._logoBase64) addImageToPDF(pdf, window._logoBase64, PAGE_W - 32, 1, 30, 16, false);
     } catch (e) { /* */ }
 
     // Title centred
@@ -101,7 +101,7 @@ function addFooterToPage(pdf) {
 
     // Footer logos — preloaded via fetch() as base64
     try {
-        if (window._footerBase64) addImageToPDF(pdf, window._footerBase64, PAGE_W/2 - 36, 263, 72, 18, false);
+        if (window._footerBase64) addImageToPDF(pdf, window._footerBase64, PAGE_W/2 - 36, 259, 72, 18, false);
     } catch (e) { /* */ }
 
     // Footer text — centred vertically in the navy bar
@@ -147,28 +147,40 @@ function drawSectionHeader(pdf, label, x, y, w) {
  * Returns Y after table.
  */
 function drawTable(pdf, rows, x, y, w) {
-    const rowH = 11;
-    const labelW = w * 0.44;
-    const valW   = w - labelW;
+    const minRowH = 11;
+    const lineH   = 5;
+    const labelW  = w * 0.44;
+    const valW    = w - labelW;
+    const tableStartY = y;
 
-    rows.forEach((row, i) => {
+    // Pre-calculate each row height based on wrapped content
+    const rowMeta = rows.map(row => {
+        pdf.setFontSize(8.5);
+        const labelLines = pdf.splitTextToSize(row[0], labelW - 4);
+        const valLines   = pdf.splitTextToSize(row[1] || '-', valW - 4);
+        const numLines   = Math.max(labelLines.length, valLines.length);
+        const rowH       = Math.max(minRowH, numLines * lineH + 4);
+        return { labelLines, valLines, rowH };
+    });
+
+    rowMeta.forEach((meta, i) => {
+        const { labelLines, valLines, rowH } = meta;
         const bg = i % 2 === 0 ? [255, 255, 255] : [244, 248, 252];
         pdf.setFillColor(...bg);
         pdf.rect(x, y, w, rowH, 'F');
+
+        const textY = y + lineH + 1;
 
         // Label
         pdf.setFontSize(8.5);
         pdf.setFont(undefined, 'bold');
         pdf.setTextColor(60, 60, 60);
-        const labelLines = pdf.splitTextToSize(row[0], labelW - 4);
-        pdf.text(labelLines[0], x + 2, y + 7);
+        pdf.text(labelLines, x + 2, textY, { lineHeightFactor: 1.3 });
 
         // Value
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(20, 20, 20);
-        const valText = row[1] || '-';
-        const valLines = pdf.splitTextToSize(valText, valW - 4);
-        pdf.text(valLines[0], x + labelW + 2, y + 7);
+        pdf.text(valLines, x + labelW + 2, textY, { lineHeightFactor: 1.3 });
 
         y += rowH;
     });
@@ -176,15 +188,14 @@ function drawTable(pdf, rows, x, y, w) {
     // Outer border
     pdf.setDrawColor(...BLUE_ACCENT);
     pdf.setLineWidth(0.3);
-    pdf.rect(x, y - (rows.length * rowH), w, rows.length * rowH);
+    pdf.rect(x, tableStartY, w, y - tableStartY);
 
     // Divider line between label and value columns
-    const divX = x + labelW;
-    const tableTop = y - rows.length * rowH;
-    pdf.line(divX, tableTop, divX, y);
+    pdf.line(x + labelW, tableStartY, x + labelW, y);
 
     return y + 2;
 }
+
 
 // ===================== COVER PAGE =====================
 
@@ -325,39 +336,39 @@ function buildInspectionSummary(pdf, data, pageTitle) {
     const { selectedFailures, generalComments, standard } = data;
     const hasFaults = selectedFailures && selectedFailures.length > 0;
 
-    // Compliance Result label
+    // Compliance Result label — much bigger
     y += 4;
-    pdf.setFontSize(9);
-    pdf.setFont(undefined, 'normal');
-    pdf.setTextColor(100, 100, 100);
-    pdf.text('Compliance Result', PAGE_W / 2, y, { align: 'center' });
-    y += 5;
-
-    // PASS/FAIL pill-sized banner
-    const bannerLabel = hasFaults ? 'FAIL — Action Required' : 'PASS';
-    pdf.setFontSize(22);
+    pdf.setFontSize(16);
     pdf.setFont(undefined, 'bold');
-    const labelW = pdf.getTextWidth(bannerLabel) + 24;
-    const bannerH = 18;
+    pdf.setTextColor(80, 80, 80);
+    pdf.text('Compliance Result', PAGE_W / 2, y, { align: 'center' });
+    y += 8;
+
+    // PASS/FAIL — bigger text, tight pill (small padding)
+    const bannerLabel = hasFaults ? 'FAIL — Action Required' : 'PASS';
+    pdf.setFontSize(26);
+    pdf.setFont(undefined, 'bold');
+    const labelW = pdf.getTextWidth(bannerLabel) + 10;
+    const bannerH = 14;
     const bannerX = (PAGE_W - labelW) / 2;
     pdf.setFillColor(...(hasFaults ? [200, 40, 40] : [34, 139, 34]));
     pdf.rect(bannerX, y, labelW, bannerH, 'F');
     pdf.setTextColor(255, 255, 255);
-    pdf.text(bannerLabel, PAGE_W / 2, y + 13, { align: 'center' });
+    pdf.text(bannerLabel, PAGE_W / 2, y + 10.5, { align: 'center' });
     pdf.setTextColor(0, 0, 0);
-    y += bannerH + 6;
+    y += bannerH + 7;
 
-    // Standard Applied
+    // Standard Applied — slightly bigger than lines below
     if (standard) {
-        pdf.setFontSize(11);
+        pdf.setFontSize(13);
         pdf.setFont(undefined, 'bold');
         pdf.setTextColor(40, 40, 40);
         pdf.text('Standard Applied: ' + standard, PAGE_W / 2, y, { align: 'center' });
-        y += 7;
+        y += 8;
     }
 
-    // Certificate validity / action required line
-    pdf.setFontSize(10);
+    // Certificate validity / action required line — 11pt (same as Standard Applied was)
+    pdf.setFontSize(11);
     pdf.setFont(undefined, 'italic');
     pdf.setTextColor(80, 80, 80);
     if (hasFaults) {
@@ -365,20 +376,20 @@ function buildInspectionSummary(pdf, data, pageTitle) {
     } else {
         pdf.text('This certificate is valid for 12 months from the date of issue.', PAGE_W / 2, y, { align: 'center' });
         if (generalComments) {
-            y += 6;
+            y += 7;
             pdf.text('(with recommendations)', PAGE_W / 2, y, { align: 'center' });
         }
     }
     pdf.setTextColor(0, 0, 0);
-    y += 8;
+    y += 9;
 
-    pdf.setFontSize(9);
+    pdf.setFontSize(11);
     pdf.setFont(undefined, 'italic');
     pdf.setTextColor(120, 120, 120);
     pdf.text('All tests are in accordance with BS EN 62305, BS6651, NF C 17-102:2011 and BS7430.', PAGE_W / 2, y, { align: 'center' });
-    y += 5;
+    y += 6;
     pdf.text('Lightning protection systems should be tested annually under The Electricity At Work Act 1989.', PAGE_W / 2, y, { align: 'center' });
-    y += 10;
+    y += 12;
     pdf.setTextColor(0, 0, 0);
 
     // Defects
