@@ -67,9 +67,9 @@ function addPageHeader(pdf, title, subtitle) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, barH, 'F');
 
-    // Logo on left — pass URL directly, same pattern as working app
+    // Logo on left — use fetch-preloaded base64 (avoids jsPDF's deprecated sync XHR)
     try {
-        addImageToPDF(pdf, COMPANY_LOGO_URL, 2, 1, 30, 16, false);
+        if (window._logoBase64) addImageToPDF(pdf, window._logoBase64, 2, 1, 30, 16, false);
     } catch (e) { /* */ }
 
     // Title centred
@@ -99,9 +99,9 @@ function addFooterToPage(pdf) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, barY, PAGE_W, barH, 'F');
 
-    // Footer logos image — sits above the navy bar, clear of page content
+    // Footer logos — use fetch-preloaded base64
     try {
-        addImageToPDF(pdf, FOOTER_IMAGE_URL, PAGE_W/2 - 36, 263, 72, 18, false);
+        if (window._footerBase64) addImageToPDF(pdf, window._footerBase64, PAGE_W/2 - 36, 263, 72, 18, false);
     } catch (e) { /* */ }
 
     // Footer text
@@ -192,11 +192,13 @@ function buildCoverPage(pdf, data) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, 10, 'F');
 
-    // Company logo centred — pass URL directly, same pattern as working app
+    // Company logo centred — use fetch-preloaded base64
     let logoY = 14;
     try {
-        const logoH = addImageToPDF(pdf, COMPANY_LOGO_URL, MARGIN, logoY, PAGE_W - MARGIN * 2, 50, true);
-        logoY += logoH + 6;
+        if (window._logoBase64) {
+            const logoH = addImageToPDF(pdf, window._logoBase64, MARGIN, logoY, PAGE_W - MARGIN * 2, 50, true);
+            logoY += logoH + 6;
+        } else { logoY += 56; }
     } catch (e) { logoY += 56; }
 
     // Building image
