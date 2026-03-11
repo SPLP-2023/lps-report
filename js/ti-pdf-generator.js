@@ -329,7 +329,7 @@ function buildCoverPage(pdf, data) {
 // ===================== INSPECTION SUMMARY =====================
 
 function buildInspectionSummary(pdf, data, pageTitle) {
-    let y = addPageHeader(pdf, pageTitle, 'Test & Inspection');
+    let y = addPageHeader(pdf, pageTitle, 'BS EN 62305 | Test & Inspection');
 
     const { selectedFailures, generalComments, standard } = data;
     const hasFaults = selectedFailures && selectedFailures.length > 0;
@@ -390,10 +390,10 @@ function buildInspectionSummary(pdf, data, pageTitle) {
     y += 12;
     pdf.setTextColor(0, 0, 0);
 
-    // Defects
-    if (hasFaults) {
-        y = drawSectionHeader(pdf, 'DEFECTS', MARGIN, y, PAGE_W - MARGIN * 2) + 3;
+    // Defects — header always shown
+    y = drawSectionHeader(pdf, 'DEFECTS', MARGIN, y, PAGE_W - MARGIN * 2) + 3;
 
+    if (hasFaults) {
         const rowW     = PAGE_W - MARGIN * 2;
         const imgW     = 65;
         const imgH     = 50;
@@ -478,9 +478,9 @@ function buildInspectionSummary(pdf, data, pageTitle) {
         pdf.setFontSize(16);
         pdf.setFont(undefined, 'bold');
         pdf.setTextColor(34, 139, 34);
-        pdf.text('No faults identified during this inspection.', PAGE_W / 2, y, { align: 'center' });
+        pdf.text('No faults identified during this inspection.', PAGE_W / 2, y + 6, { align: 'center' });
         pdf.setTextColor(0, 0, 0);
-        y += 14;
+        y += 16;
     }
 
     // Recommendations
