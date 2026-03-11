@@ -67,9 +67,9 @@ function addPageHeader(pdf, title, subtitle) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, barH, 'F');
 
-    // Logo on left — use fetch-preloaded base64 (avoids jsPDF's deprecated sync XHR)
+    // Logo on left — raw GitHub URL, same approach as pdf-generator-risk.js
     try {
-        if (window._logoBase64) addImageToPDF(pdf, window._logoBase64, 2, 1, 30, 16, false);
+        addImageToPDF(pdf, 'https://raw.githubusercontent.com/SPLP-2023/lps-report/main/assets/Color%20logo%20-%20no%20background%20(px%20reduction).png', 2, 1, 30, 16, false);
     } catch (e) { /* */ }
 
     // Title centred
@@ -99,9 +99,9 @@ function addFooterToPage(pdf) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, barY, PAGE_W, barH, 'F');
 
-    // Footer logos — use fetch-preloaded base64
+    // Footer logos — raw GitHub URL
     try {
-        if (window._footerBase64) addImageToPDF(pdf, window._footerBase64, PAGE_W/2 - 36, 263, 72, 18, false);
+        addImageToPDF(pdf, 'https://raw.githubusercontent.com/SPLP-2023/lps-report/main/assets/es12nobackground.png', PAGE_W/2 - 36, 263, 72, 18, false);
     } catch (e) { /* */ }
 
     // Footer text
@@ -192,13 +192,11 @@ function buildCoverPage(pdf, data) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, 10, 'F');
 
-    // Company logo centred — use fetch-preloaded base64
+    // Company logo centred — raw GitHub URL
     let logoY = 14;
     try {
-        if (window._logoBase64) {
-            const logoH = addImageToPDF(pdf, window._logoBase64, MARGIN, logoY, PAGE_W - MARGIN * 2, 50, true);
-            logoY += logoH + 6;
-        } else { logoY += 56; }
+        const logoH = addImageToPDF(pdf, 'https://raw.githubusercontent.com/SPLP-2023/lps-report/main/assets/Color%20logo%20-%20no%20background%20(px%20reduction).png', MARGIN, logoY, PAGE_W - MARGIN * 2, 50, true);
+        logoY += logoH + 6;
     } catch (e) { logoY += 56; }
 
     // Building image
@@ -534,22 +532,27 @@ function buildEarthResistance(pdf, data) {
     } else {
         const overall = ed.overallResistance;
 
-        // Overall resistance summary box
+        // Overall resistance — plain text, reading in bold red/green
         if (overall > 0) {
-            const boxH = 14;
             const pass = overall <= 10;
-            pdf.setFillColor(...(pass ? [34, 139, 34] : [200, 40, 40]));
-            pdf.rect(MARGIN, y, PAGE_W - MARGIN * 2, boxH, 'F');
-            pdf.setFontSize(10);
-            pdf.setFont(undefined, 'bold');
-            pdf.setTextColor(255, 255, 255);
-            const overallLabel = `Overall System Resistance: ${overall.toFixed(3)} ohms  --  ${pass ? 'BELOW 10 ohms' : 'EXCEEDS 10 ohms'}${suffix}`;
-            const overallLines = pdf.splitTextToSize(overallLabel, PAGE_W - MARGIN * 2 - 6);
-            const lineH = 4.5;
-            const textY = y + (boxH / 2) - ((overallLines.length - 1) * lineH / 2);
-            pdf.text(overallLines, PAGE_W / 2, textY, { align: 'center', lineHeightFactor: 1.3 });
+            const readingStr = overall.toFixed(2);
+
+            // "Overall System Resistance: " in normal black
+            pdf.setFontSize(11);
+            pdf.setFont(undefined, 'normal');
             pdf.setTextColor(0, 0, 0);
-            y += boxH + 6;
+            const labelStr = 'Overall System Resistance: ';
+            const labelW = pdf.getTextWidth(labelStr);
+            const lineX = (PAGE_W - labelW - pdf.getStringUnitWidth(readingStr) * 11 / pdf.internal.scaleFactor) / 2;
+            pdf.text(labelStr, PAGE_W / 2, y + 6, { align: 'right' });
+
+            // Reading in bold red or green
+            pdf.setFont(undefined, 'bold');
+            pdf.setTextColor(...(pass ? [34, 139, 34] : [200, 40, 40]));
+            pdf.text(readingStr + ' ohms' + (suffix ? '  ' + suffix : ''), PAGE_W / 2, y + 6, { align: 'left' });
+
+            pdf.setTextColor(0, 0, 0);
+            y += 14;
         }
 
         // Earth table
