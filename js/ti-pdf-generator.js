@@ -67,9 +67,9 @@ function addPageHeader(pdf, title, subtitle) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, barH, 'F');
 
-    // Logo on left — raw GitHub URL, same approach as pdf-generator-risk.js
+    // Logo on left — preloaded via fetch() as base64, no canvas so transparency preserved
     try {
-        addImageToPDF(pdf, 'https://raw.githubusercontent.com/SPLP-2023/lps-report/main/assets/Color%20logo%20-%20no%20background%20(px%20reduction).png', 2, 1, 30, 16, false);
+        if (window._logoBase64) addImageToPDF(pdf, window._logoBase64, 2, 1, 30, 16, false);
     } catch (e) { /* */ }
 
     // Title centred
@@ -99,9 +99,9 @@ function addFooterToPage(pdf) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, barY, PAGE_W, barH, 'F');
 
-    // Footer logos — raw GitHub URL
+    // Footer logos — preloaded via fetch() as base64
     try {
-        addImageToPDF(pdf, 'https://raw.githubusercontent.com/SPLP-2023/lps-report/main/assets/es12nobackground.png', PAGE_W/2 - 36, 263, 72, 18, false);
+        if (window._footerBase64) addImageToPDF(pdf, window._footerBase64, PAGE_W/2 - 36, 263, 72, 18, false);
     } catch (e) { /* */ }
 
     // Footer text
@@ -192,11 +192,13 @@ function buildCoverPage(pdf, data) {
     pdf.setFillColor(...NAVY);
     pdf.rect(0, 0, PAGE_W, 10, 'F');
 
-    // Company logo centred — raw GitHub URL
+    // Company logo centred — preloaded via fetch() as base64
     let logoY = 14;
     try {
-        const logoH = addImageToPDF(pdf, 'https://raw.githubusercontent.com/SPLP-2023/lps-report/main/assets/Color%20logo%20-%20no%20background%20(px%20reduction).png', MARGIN, logoY, PAGE_W - MARGIN * 2, 50, true);
-        logoY += logoH + 6;
+        if (window._logoBase64) {
+            const logoH = addImageToPDF(pdf, window._logoBase64, MARGIN, logoY, PAGE_W - MARGIN * 2, 50, true);
+            logoY += logoH + 6;
+        } else { logoY += 56; }
     } catch (e) { logoY += 56; }
 
     // Building image
@@ -241,7 +243,12 @@ function buildCoverPage(pdf, data) {
     // Info card
     const rowH = 16;
     const numRows = 4; // Job Ref/Date, Engineer/Kit, Site Staff/Sig, Site Address
-    const infoH = siteStaffSignature ? (numRows * rowH) + 6 : (numRows * rowH) + 2;
+
+    // Calculate address height dynamically
+    const addrLines = pdf.splitTextToSize(data.siteAddress || '-', cardW - 10);
+    const addrRowH = Math.max(rowH, 6 + addrLines.length * 5);
+
+    const infoH = (rowH * 3) + addrRowH + (siteStaffSignature ? 6 : 2);
     pdf.setFillColor(250, 252, 255);
     pdf.rect(cardX, logoY, cardW, infoH, 'F');
     pdf.setDrawColor(...BLUE_ACCENT);
@@ -259,7 +266,8 @@ function buildCoverPage(pdf, data) {
     const labelColor = [100, 130, 160];
     const valueColor = [20, 20, 20];
 
-    function infoField(label, value, x, y) {
+    function infoField(label, value, x, y, maxW) {
+        const colW = maxW || (cardW / 2) - 10;
         pdf.setFontSize(6.5);
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(...labelColor);
@@ -267,8 +275,8 @@ function buildCoverPage(pdf, data) {
         pdf.setFontSize(9);
         pdf.setFont(undefined, 'bold');
         pdf.setTextColor(...valueColor);
-        const lines = pdf.splitTextToSize(value || '-', (cardW / 2) - 10);
-        pdf.text(lines[0], x, y + 10);
+        const lines = pdf.splitTextToSize(value || '-', colW);
+        pdf.text(lines, x, y + 10, { lineHeightFactor: 1.4 });
     }
 
     // Draw rows with dividers between them
@@ -277,8 +285,9 @@ function buildCoverPage(pdf, data) {
         [['Job Reference', jobReference], ['Date', formatDate(testDate)]],
         [['Engineer', engineerName],      ['Test Kit Ref', testKitRef]],
         [['Site Staff', siteStaffName],   siteStaffSignature ? null : ['', '']],
-        [['Site Address', siteAddress],   ['', '']],
+        [['Site Address', siteAddress],   null],
     ];
+    const rowHeights = [rowH, rowH, rowH, addrRowH];
 
     rows.forEach((row, i) => {
         // Horizontal divider above each row (except first)
@@ -287,8 +296,10 @@ function buildCoverPage(pdf, data) {
             pdf.setLineWidth(0.3);
             pdf.line(cardX + 1, iy, cardX + cardW - 1, iy);
         }
-        infoField(row[0][0], row[0][1], col1X, iy);
-        if (row[1] && row[1][0]) infoField(row[1][0], row[1][1], col2X, iy);
+        // Address row spans full width (no right column)
+        const isAddrRow = i === 3;
+        infoField(row[0][0], row[0][1], col1X, iy, isAddrRow ? cardW - 10 : undefined);
+        if (!isAddrRow && row[1] && row[1][0]) infoField(row[1][0], row[1][1], col2X, iy);
 
         // Signature on row 2 right column
         if (i === 2 && siteStaffSignature) {
@@ -298,7 +309,7 @@ function buildCoverPage(pdf, data) {
             pdf.text('SITE STAFF SIGNATURE', col2X, iy + 3);
             try { pdf.addImage(siteStaffSignature, 'PNG', col2X, iy + 4, 50, 10); } catch(e) {}
         }
-        iy += rowH;
+        iy += rowHeights[i];
     });
 
     // Footer
@@ -581,7 +592,7 @@ function renderEarthTable(pdf, rows, y) {
     const headers     = ['E', 'Ohms', 'Test Clamp', 'Pit', 'Test Type', 'Ground', 'Earth Type', 'Comment'];
     const rowH        = 8;
     const headerH     = 10;
-    const rowsPerPage = 18;
+    const rowsPerPage = 25;
     let rowsOnPage    = 0;
     let tableStartY   = y;
 
