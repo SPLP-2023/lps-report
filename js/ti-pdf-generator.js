@@ -219,35 +219,16 @@ function buildCoverPage(pdf, data) {
     if (data.buildingImage) {
         try {
             const imgH = addImageToPDF(pdf, data.buildingImage, MARGIN, logoY, PAGE_W - MARGIN * 2, 65, true);
-            logoY += imgH + 8;
-        } catch (e) { logoY += 8; }
+            logoY += imgH + 6;
+        } catch (e) { logoY += 6; }
     }
 
-    // Title card
+    // Job Reference + Address block
     const cardX = MARGIN;
     const cardW = PAGE_W - MARGIN * 2;
-    const cardH = 24;
-    pdf.setFillColor(25, 45, 65);
-    pdf.rect(cardX, logoY, cardW, cardH, 'F');
-
-    pdf.setFontSize(16);
-    pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(255, 255, 255);
-    pdf.text('LIGHTNING PROTECTION', PAGE_W / 2, logoY + 9, { align: 'center' });
-
-    pdf.setFontSize(13);
-    pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(230, 160, 40);
-    pdf.text('TEST & INSPECTION REPORT', PAGE_W / 2, logoY + 18, { align: 'center' });
-    logoY += cardH + 4;
-
-    // Job Reference + Address block — evenly spaced between title card and info table
     const addrBlock = siteAddress ? pdf.splitTextToSize(siteAddress, cardW - 10) : [];
-    const blockH = 8 + (addrBlock.length * 5); // title line + address lines
-    const gapH = 14; // total breathing room split above and below
-    const topPad = Math.round(gapH / 2);
 
-    logoY += topPad;
+    logoY += 4;
     pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(...NAVY);
@@ -261,8 +242,21 @@ function buildCoverPage(pdf, data) {
         pdf.text(addrBlock, PAGE_W / 2, logoY, { align: 'center', lineHeightFactor: 1.5 });
         logoY += addrBlock.length * 5;
     }
+    logoY += 6;
 
-    logoY += gapH - topPad + 2;
+    // Title card
+    const cardH = 24;
+    pdf.setFillColor(25, 45, 65);
+    pdf.rect(cardX, logoY, cardW, cardH, 'F');
+    pdf.setFontSize(16);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('LIGHTNING PROTECTION', PAGE_W / 2, logoY + 9, { align: 'center' });
+    pdf.setFontSize(13);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(230, 160, 40);
+    pdf.text('TEST & INSPECTION REPORT', PAGE_W / 2, logoY + 18, { align: 'center' });
+    logoY += cardH + 6;
 
     // Info card — 3 rows: Site Name/Date, Engineer/Kit Ref, Site Staff/Signature
     const rowH = 18;
