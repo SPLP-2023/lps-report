@@ -161,6 +161,7 @@
 <script src="js/exif.js"></script>
 <script src="js/data.js"></script>
 <script src="js/touch-signature.js"></script>
+<script src="js/autosave.js"></script>
 <script src="js/remedial-report.js"></script>
 <script src="js/remedial-pdf.js"></script>
 
@@ -246,6 +247,7 @@
             window.imageStore[storeKey] = data;
             document.getElementById(previewId).textContent = '✓ Image uploaded';
             updateAllDots();
+            triggerAutoSave();
         });
     }
 
@@ -265,6 +267,7 @@
             if (previewEl) previewEl.textContent = '✓ ' + total + ' photo(s)';
             updateAllDots();
             refreshSelectedRepair(repairId);
+            triggerAutoSave();
         });
     }
 </script>
@@ -342,6 +345,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof TouchSignature !== 'undefined') {
         window.siteStaffSignature = new TouchSignature('signatureCanvas','clearSignature','saveSignature','signatureStatus');
     }
+    // Start auto-save after signature and repairs list are ready
+    initRemedialAutoSave();
 });
 </script>
 </body>
