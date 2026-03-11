@@ -1,0 +1,351 @@
+// =============================================================================
+// remedial-pdf.js — Remedial Report PDF Generator
+// Layout exactly mirrors ti-pdf-generator.js: same header, footer, cover page
+// =============================================================================
+
+const RM_NAVY        = [13, 27, 42];
+const RM_BLUE        = [8, 119, 195];
+const RM_AMBER       = [230, 160, 40];
+const RM_PAGE_W      = 210;
+const RM_PAGE_H      = 297;
+const RM_MARGIN      = 14;
+const RM_PAGE_BOT    = 262;
+const RM_FOOTER_TEXT = 'Strike Point Lightning Protection Ltd  |  Registered office: Atkinson Evans, 10 Arnot Hill Road, Nottingham NG5 6LJ  |  Company No. 15114852, Registered in England and Wales  |  info@strikepoint.uk  |  Tel: 01159903220';
+
+// ---- EXACT COPY of T&I addImageToPDF ----
+function rmAddImageToPDF(pdf, imageData, x, y, maxWidth, maxHeight, centerAlign) {
+    if (!imageData) return 0;
+    try {
+        const format = imageData.startsWith('data:image/jpeg') || imageData.startsWith('data:image/jpg') ? 'JPEG' : 'PNG';
+        const props = pdf.getImageProperties(imageData);
+        const ar = props.width / props.height;
+        let fw, fh;
+        if (ar > maxWidth / maxHeight) { fw = maxWidth; fh = maxWidth / ar; }
+        else { fh = maxHeight; fw = maxHeight * ar; }
+        const fx = centerAlign ? x + (maxWidth - fw) / 2 : x;
+        pdf.addImage(imageData, format, fx, y, fw, fh);
+        return fh;
+    } catch (e) {
+        console.error('rmAddImageToPDF error:', e);
+        return 0;
+    }
+}
+
+// ---- EXACT COPY of T&I addPageHeader ----
+function rmAddPageHeader(pdf, title, subtitle) {
+    const barH = 18;
+    pdf.setFillColor(...RM_NAVY);
+    pdf.rect(0, 0, RM_PAGE_W, barH, 'F');
+    try {
+        if (window._logoBase64) rmAddImageToPDF(pdf, window._logoBase64, RM_PAGE_W - 32, 1, 30, 16, false);
+    } catch (e) {}
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(title, RM_PAGE_W / 2, 10, { align: 'center' });
+    if (subtitle) {
+        pdf.setFontSize(7);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(180, 210, 235);
+        pdf.text(subtitle, RM_PAGE_W / 2, 15, { align: 'center' });
+    }
+    pdf.setTextColor(0, 0, 0);
+    return barH + 6;
+}
+
+// ---- EXACT COPY of T&I addFooterToPage ----
+function rmAddFooterToPage(pdf) {
+    const barH = 16;
+    const barY = RM_PAGE_H - barH;
+    pdf.setFillColor(...RM_NAVY);
+    pdf.rect(0, barY, RM_PAGE_W, barH, 'F');
+    try {
+        if (window._footerBase64) rmAddImageToPDF(pdf, window._footerBase64, RM_PAGE_W / 2 - 36, 259, 72, 18, false);
+    } catch (e) {}
+    pdf.setFontSize(5.5);
+    pdf.setFont(undefined, 'normal');
+    pdf.setTextColor(160, 190, 210);
+    const lines = pdf.splitTextToSize(RM_FOOTER_TEXT, 180);
+    const lineH = 3.5;
+    const textBlockH = lines.length * lineH;
+    const textY = barY + (barH / 2) - (textBlockH / 2) + lineH;
+    pdf.text(lines, RM_PAGE_W / 2, textY, { align: 'center', lineHeightFactor: 1.3 });
+    pdf.setTextColor(0, 0, 0);
+}
+
+// ---- EXACT COPY of T&I newPage ----
+function rmNewPage(pdf, title, subtitle) {
+    pdf.addPage();
+    rmAddFooterToPage(pdf);
+    return rmAddPageHeader(pdf, title, subtitle);
+}
+
+// ---- Section header bar ----
+function rmSectionHeader(pdf, label, x, y, w) {
+    pdf.setFillColor(...RM_BLUE);
+    pdf.rect(x, y, w, 9, 'F');
+    pdf.setFontSize(8.5);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(label.toUpperCase(), x + 4, y + 6.2);
+    pdf.setTextColor(0, 0, 0);
+    return y + 9;
+}
+
+function rmSafe(str) { return (str || '').replace(/[^\x20-\x7E]/g, ''); }
+
+function rmFormatDate(dateStr) {
+    if (!dateStr) return '-';
+    const [y, m, d] = dateStr.split('-');
+    return y ? `${d}/${m}/${y}` : '-';
+}
+
+function rmFormatDateShort(dateStr) {
+    if (!dateStr) return 'undated';
+    const [y, m, d] = dateStr.split('-');
+    return y ? `${d}-${m}-${y.slice(2)}` : 'undated';
+}
+
+// ===================== COVER PAGE =====================
+// Exact T&I order: navy bar → logo centred → building photo → site name/address → title card → info table → footer
+
+function rmBuildCoverPage(pdf, data) {
+    const { siteName, siteAddress, remedialDate, remedialEngineer, siteStaffName,
+            signatureData, buildingImage, jobReference } = data;
+
+    // Top navy bar
+    pdf.setFillColor(...RM_NAVY);
+    pdf.rect(0, 0, RM_PAGE_W, 10, 'F');
+
+    // Company logo centred — same as T&I
+    let y = 14;
+    try {
+        if (window._logoBase64) {
+            const logoH = rmAddImageToPDF(pdf, window._logoBase64, RM_MARGIN, y, RM_PAGE_W - RM_MARGIN * 2, 50, true);
+            y += logoH + 6;
+        } else { y += 56; }
+    } catch (e) { y += 56; }
+
+    // Building image — same as T&I
+    if (buildingImage) {
+        try {
+            const imgH = rmAddImageToPDF(pdf, buildingImage, RM_MARGIN, y, RM_PAGE_W - RM_MARGIN * 2, 65, true);
+            y += imgH + 6;
+        } catch (e) { y += 6; }
+    }
+
+    // Site name and address — below image
+    const cardX = RM_MARGIN;
+    const cardW = RM_PAGE_W - RM_MARGIN * 2;
+    const addrBlock = siteAddress ? pdf.splitTextToSize(rmSafe(siteAddress), cardW - 10) : [];
+
+    y += 4;
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(...RM_NAVY);
+    pdf.text(rmSafe(siteName || jobReference || '-'), RM_PAGE_W / 2, y + 6, { align: 'center' });
+    y += 10;
+
+    if (addrBlock.length > 0) {
+        pdf.setFontSize(9);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(90, 90, 90);
+        pdf.text(addrBlock, RM_PAGE_W / 2, y, { align: 'center', lineHeightFactor: 1.5 });
+        y += addrBlock.length * 5;
+    }
+    y += 6;
+
+    // Title card
+    const cardH = 24;
+    pdf.setFillColor(25, 45, 65);
+    pdf.rect(cardX, y, cardW, cardH, 'F');
+    pdf.setFontSize(16);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('LIGHTNING PROTECTION', RM_PAGE_W / 2, y + 9, { align: 'center' });
+    pdf.setFontSize(13);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(...RM_AMBER);
+    pdf.text('REMEDIAL REPORT', RM_PAGE_W / 2, y + 18, { align: 'center' });
+    y += cardH + 6;
+
+    // Info table — 3 rows x 2 cols
+    const rowH = 18;
+    const infoH = rowH * 3;
+    pdf.setFillColor(250, 252, 255);
+    pdf.rect(cardX, y, cardW, infoH, 'F');
+    pdf.setDrawColor(...RM_BLUE);
+    pdf.setLineWidth(0.5);
+    pdf.rect(cardX, y, cardW, infoH);
+
+    const divX = cardX + cardW / 2;
+    pdf.setDrawColor(210, 225, 240);
+    pdf.setLineWidth(0.3);
+    pdf.line(divX, y + 1, divX, y + infoH - 1);
+
+    const col1X = cardX + 5;
+    const col2X = cardX + cardW / 2 + 5;
+    const colW  = cardW / 2 - 10;
+    const labelColor = [100, 130, 160];
+    const valueColor = [20, 20, 20];
+
+    function infoField(label, value, x, fy) {
+        pdf.setFontSize(7);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(...labelColor);
+        pdf.text(label.toUpperCase(), x, fy + 4);
+        pdf.setFontSize(10);
+        pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(...valueColor);
+        const lines = pdf.splitTextToSize(rmSafe(value) || '-', colW);
+        pdf.text(lines[0], x, fy + 12);
+    }
+
+    // Row dividers
+    pdf.setDrawColor(210, 225, 240); pdf.setLineWidth(0.3);
+    pdf.line(cardX + 1, y + rowH, cardX + cardW - 1, y + rowH);
+    pdf.line(cardX + 1, y + rowH * 2, cardX + cardW - 1, y + rowH * 2);
+
+    infoField('Job Reference',     jobReference,   col1X, y);
+    infoField('Date',              rmFormatDate(remedialDate), col2X, y);
+    infoField('Remedial Engineer', remedialEngineer, col1X, y + rowH);
+    infoField('Site Staff',        siteStaffName,  col2X, y + rowH);
+
+    // Signature row
+    pdf.setFontSize(7);
+    pdf.setFont(undefined, 'normal');
+    pdf.setTextColor(...labelColor);
+    pdf.text('SITE STAFF SIGNATURE', col2X, y + rowH * 2 + 4);
+    if (signatureData) {
+        try { pdf.addImage(signatureData, 'PNG', col2X, y + rowH * 2 + 5, 50, 11); } catch(e) {}
+    }
+    pdf.setTextColor(0, 0, 0);
+
+    rmAddFooterToPage(pdf);
+}
+
+// ===================== REMEDIAL WORKS PAGE =====================
+
+function rmBuildWorks(pdf, data) {
+    let y = rmNewPage(pdf, 'REMEDIAL WORKS', 'Lightning Protection Remedial Report');
+    const M = RM_MARGIN;
+    const W = RM_PAGE_W - M * 2;
+
+    // Selected Repairs
+    if (data.selectedRepairs && data.selectedRepairs.length) {
+        y = rmSectionHeader(pdf, 'Works Carried Out', M, y, W) + 6;
+
+        data.selectedRepairs.forEach((repair, i) => {
+            if (y + 18 > RM_PAGE_BOT) y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+
+            // Numbered bullet
+            pdf.setFillColor(...RM_BLUE);
+            pdf.circle(M + 3.5, y - 1.5, 3.5, 'F');
+            pdf.setFontSize(8);
+            pdf.setFont(undefined, 'bold');
+            pdf.setTextColor(255, 255, 255);
+            pdf.text(String(i + 1), M + 3.5, y - 0.5, { align: 'center' });
+            pdf.setTextColor(0, 0, 0);
+
+            pdf.setFontSize(9.5);
+            pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(30, 30, 30);
+            const lines = pdf.splitTextToSize(rmSafe(repair.text), W - 12);
+            lines.forEach((line, li) => {
+                if (li > 0 && y > RM_PAGE_BOT - 8) y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+                pdf.text(line, M + 10, y);
+                y += 5.5;
+            });
+            y += 4;
+        });
+        y += 6;
+    }
+
+    // Additional Repairs
+    if (data.additionalRepairs && data.additionalRepairs.trim()) {
+        if (y + 30 > RM_PAGE_BOT) y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+        y = rmSectionHeader(pdf, 'Additional Repairs Discovered On Site', M, y, W) + 6;
+        pdf.setFontSize(9); pdf.setFont(undefined, 'normal'); pdf.setTextColor(30, 30, 30);
+        const lines = pdf.splitTextToSize(rmSafe(data.additionalRepairs), W - 4);
+        lines.forEach(line => {
+            if (y > RM_PAGE_BOT - 8) y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+            pdf.text(line, M + 2, y);
+            y += 5;
+        });
+        y += 8;
+    }
+
+    // Completion Notes
+    if (data.completionNotes && data.completionNotes.trim()) {
+        if (y + 30 > RM_PAGE_BOT) y = rmNewPage(pdf, 'COMPLETION NOTES', 'Lightning Protection Remedial Report');
+        else y = rmSectionHeader(pdf, 'Completion Notes', M, y, W) + 6;
+        pdf.setFontSize(9); pdf.setFont(undefined, 'normal'); pdf.setTextColor(30, 30, 30);
+        const lines = pdf.splitTextToSize(rmSafe(data.completionNotes), W - 4);
+        lines.forEach(line => {
+            if (y > RM_PAGE_BOT - 8) y = rmNewPage(pdf, 'COMPLETION NOTES (CONTINUED)', 'Lightning Protection Remedial Report');
+            pdf.text(line, M + 2, y);
+            y += 5;
+        });
+    }
+}
+
+// ===================== REMEDIAL IMAGES =====================
+
+function rmBuildImages(pdf, images) {
+    let y = rmNewPage(pdf, 'REMEDIAL WORK PHOTOGRAPHS', 'Lightning Protection Remedial Report');
+    const M = RM_MARGIN;
+    const imgW = 85, imgH = 63, gap = 6;
+    const col1X = M, col2X = M + imgW + gap;
+    let count = 0;
+    images.forEach(img => {
+        if (!img) return;
+        if (count > 0 && count % 6 === 0) {
+            y = rmNewPage(pdf, 'REMEDIAL PHOTOGRAPHS (CONTINUED)', 'Lightning Protection Remedial Report');
+        }
+        const row = Math.floor((count % 6) / 2);
+        const col = count % 2;
+        rmAddImageToPDF(pdf, img, col === 0 ? col1X : col2X, y + row * (imgH + gap), imgW, imgH, false);
+        count++;
+    });
+}
+
+// ===================== MAIN ENTRY POINT =====================
+
+function generateRemedialPDF() {
+    const siteName        = document.getElementById('siteName')?.value || '';
+    const jobReference    = document.getElementById('jobReference')?.value || '';
+    const siteAddress     = document.getElementById('siteAddress')?.value || '';
+    const remedialDate    = document.getElementById('remedialDate')?.value || '';
+    const remedialEngineer= document.getElementById('remedialEngineer')?.value || '';
+    const siteStaffName   = document.getElementById('siteStaffName')?.value || '';
+    const additionalRepairs = document.getElementById('additionalRepairs')?.value || '';
+    const completionNotes = document.getElementById('completionNotes')?.value || '';
+
+    if (!siteAddress.trim() && !siteName.trim()) {
+        alert('Please enter at least a Site Name or Site Address before generating the report.');
+        return;
+    }
+    if (!window.selectedRepairs || !window.selectedRepairs.length) {
+        if (!confirm('No repairs have been selected. Continue anyway?')) return;
+    }
+
+    const data = {
+        siteName, jobReference, siteAddress, remedialDate, remedialEngineer, siteStaffName,
+        additionalRepairs, completionNotes,
+        signatureData:   window.siteStaffSignature ? window.siteStaffSignature.getSignatureData() : null,
+        buildingImage:   window.uploadedImages['buildingImagePreview_data'] || null,
+        selectedRepairs: window.selectedRepairs || [],
+        remedialImages:  window.uploadedImages['remedialImagesPreview_data'] || null,
+    };
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    rmBuildCoverPage(pdf, data);
+    rmBuildWorks(pdf, data);
+    const imgs = Array.isArray(data.remedialImages) ? data.remedialImages : (data.remedialImages ? [data.remedialImages] : []);
+    if (imgs.length) rmBuildImages(pdf, imgs);
+
+    const namePart = (siteName || jobReference || 'Remedial').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
+    pdf.save(`Lightning Protection Remedial Report - ${namePart} ${rmFormatDateShort(remedialDate)}.pdf`);
+}
