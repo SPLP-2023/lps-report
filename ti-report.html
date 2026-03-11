@@ -451,6 +451,32 @@
             .then(r => console.log('SW registered:', r.scope))
             .catch(e => console.log('SW failed:', e));
     }
+
+    // Pre-fetch branding images as base64 on page load using fetch() API.
+    // This avoids jsPDF's deprecated synchronous XHR which browsers now block.
+    async function blobToBase64(blob) {
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    async function preloadBrandingImages() {
+        try {
+            const [logoBlob, footerBlob] = await Promise.all([
+                fetch('./assets/Color logo - no background (px reduction).png').then(r => r.blob()),
+                fetch('./assets/es12nobackground.png').then(r => r.blob())
+            ]);
+            window._logoBase64   = await blobToBase64(logoBlob);
+            window._footerBase64 = await blobToBase64(footerBlob);
+            console.log('Branding images preloaded OK');
+        } catch(e) {
+            console.error('Failed to preload branding images:', e);
+        }
+    }
+
+    preloadBrandingImages();
 </script>
 </body>
 </html>
