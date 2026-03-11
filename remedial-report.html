@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remedial Report — StrikeR</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" type="image/png" href="assets/SP Bolt 400x400.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="StrikeR">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <style>
+        /* ---- Remedial repair item ---- */
+        .repair-item {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            transition: border-color 0.2s;
+        }
+        .repair-item.selected {
+            border-color: #0877c3;
+            background: #f0f7ff;
+        }
+        .repair-item label {
+            flex: 1;
+            font-size: 14px;
+            color: #222;
+            cursor: pointer;
+            line-height: 1.4;
+            margin: 0;
+            font-weight: normal;
+        }
+        .repair-item input[type="checkbox"] {
+            width: 18px; height: 18px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            cursor: pointer;
+            accent-color: #0877c3;
+        }
+        .repair-item .repair-inputs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+        .repair-item .repair-inputs label {
+            font-size: 12px;
+            color: #555;
+            font-weight: 600;
+            flex: none;
+            width: auto;
+        }
+        .repair-item .repair-inputs input[type="number"],
+        .repair-item .repair-inputs input[type="text"] {
+            width: 70px;
+            padding: 4px 8px;
+            border: 1px solid #adb5bd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .repair-item .repair-inputs input[type="text"] {
+            width: 120px;
+        }
+        .repair-item-body {
+            flex: 1;
+        }
+        .repair-label-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        /* Selected repairs list */
+        .selected-repair-tag {
+            background: #e8f4fd;
+            border: 1px solid #0877c3;
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            font-size: 13.5px;
+            color: #0d1b2a;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .selected-repair-tag .repair-text { flex: 1; line-height: 1.45; }
+        .selected-repair-tag .remove-btn {
+            background: none; border: none;
+            color: #c0392b; font-size: 18px;
+            cursor: pointer; padding: 0; line-height: 1;
+            flex-shrink: 0;
+        }
+        .repairs-list-wrap {
+            max-height: 420px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 10px;
+            background: #fafafa;
+        }
+        .custom-repair-row {
+            display: flex; gap: 10px; align-items: flex-start;
+        }
+        .custom-repair-row textarea {
+            flex: 1;
+            min-height: 60px;
+            resize: vertical;
+        }
+        .add-btn {
+            background: #0877c3;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .add-btn:hover { background: #065f99; }
+        .empty-msg { color: #888; font-style: italic; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="nav-header">
+        <button class="nav-button back-button" onclick="location.href='reports.html'">← Back to Reports</button>
+        <button class="nav-button" onclick="location.href='tools.html'">Tools</button>
+    </div>
+
+    <h1>Remedial Report</h1>
+
+    <!-- ===================== SITE INFORMATION ===================== -->
+    <div class="section" id="sec-site">
+        <button class="section-header" onclick="toggleSection('sec-site')">
+            <span class="section-title">📋 Site Information</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-site"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="siteName">Site Name:</label>
+                    <input type="text" id="siteName" placeholder="e.g. Upper Norwood Library...">
+                </div>
+                <div class="form-group">
+                    <label for="jobReference">Job Reference:</label>
+                    <input type="text" id="jobReference" placeholder="Enter job reference...">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="siteAddress">Site Address:</label>
+                    <textarea id="siteAddress" rows="3" placeholder="Enter full site address..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="remedialDate">Remedial Date:</label>
+                    <input type="date" id="remedialDate">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="remedialEngineer">Remedial Engineer:</label>
+                    <input type="text" id="remedialEngineer" placeholder="Enter engineer name...">
+                </div>
+                <div class="form-group">
+                    <label for="siteStaffName">Site Staff Name:</label>
+                    <input type="text" id="siteStaffName" placeholder="Enter site staff name...">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Site Staff Signature:</label>
+                <div class="signature-container">
+                    <canvas id="signatureCanvas" width="300" height="120"></canvas>
+                    <div class="signature-controls">
+                        <button type="button" id="clearSignature" class="signature-btn clear-btn">Clear</button>
+                        <button type="button" id="saveSignature" class="signature-btn save-btn">Save</button>
+                    </div>
+                    <div id="signatureStatus" class="signature-status">Please sign above</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Building Image (Cover Page):</label>
+                <div class="image-upload" onclick="document.getElementById('buildingImageFile').click()">
+                    <input type="file" id="buildingImageFile" accept="image/*" class="hidden-file-input"
+                        onchange="handleImageUpload(this, 'buildingImagePreview')">
+                    <div id="buildingImagePreview">Click to upload building photo</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== REPAIRS TO COMPLETE ===================== -->
+    <div class="section" id="sec-repairs">
+        <button class="section-header" onclick="toggleSection('sec-repairs')">
+            <span class="section-title">🔧 Repairs to Complete</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-repairs"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
+            <p style="font-style:italic;color:#6c757d;margin-bottom:14px;">Select repairs carried out. Where shown, enter quantity or earth point reference.</p>
+            <div class="repairs-list-wrap" id="repairsListContainer">
+                <!-- Populated by JS -->
+            </div>
+            <div style="margin-top:16px;">
+                <label style="font-weight:600;">Custom Repair / Free Text:</label>
+                <div class="custom-repair-row" style="margin-top:8px;">
+                    <textarea id="customRepairText" placeholder="Describe a repair not listed above..."></textarea>
+                    <button class="add-btn" onclick="addCustomRepair()">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== SELECTED REPAIRS ===================== -->
+    <div class="section" id="sec-selected">
+        <button class="section-header" onclick="toggleSection('sec-selected')">
+            <span class="section-title">✅ Selected Repairs</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-selected"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
+            <div id="selectedRepairsContainer">
+                <p class="empty-msg">No repairs selected yet. Tick repairs in the section above.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== ADDITIONAL REPAIRS ===================== -->
+    <div class="section" id="sec-additional">
+        <button class="section-header" onclick="toggleSection('sec-additional')">
+            <span class="section-title">➕ Additional Repairs Required</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-additional"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
+            <div class="form-group">
+                <label for="additionalRepairs">Additional Repairs Discovered On Site:</label>
+                <textarea id="additionalRepairs" rows="4" placeholder="Enter any additional repairs discovered during the remedial visit (if any)..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== COMPLETION NOTES ===================== -->
+    <div class="section" id="sec-completion">
+        <button class="section-header" onclick="toggleSection('sec-completion')">
+            <span class="section-title">📝 Completion Notes</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-completion"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
+            <div class="form-group">
+                <label for="completionNotes">General Comments / Completion Status:</label>
+                <textarea id="completionNotes" rows="5" placeholder="Enter general comments about the remedial work, completion status, outstanding items..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== REMEDIAL IMAGES ===================== -->
+    <div class="section" id="sec-images">
+        <button class="section-header" onclick="toggleSection('sec-images')">
+            <span class="section-title">📷 Remedial Work Images</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-images"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
+            <div class="form-group">
+                <label>Upload Remedial Photos:</label>
+                <div class="image-upload" onclick="document.getElementById('remedialImagesFile').click()">
+                    <input type="file" id="remedialImagesFile" accept="image/*" multiple class="hidden-file-input"
+                        onchange="handleMultipleImageUpload(this, 'remedialImagesPreview')">
+                    <div id="remedialImagesPreview">Click to upload remedial work photos</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="height:80px;"></div>
+
+</div><!-- /container -->
+
+<div class="sticky-generate">
+    <button id="generateRemedialReport" onclick="generateRemedialPDF()">⚡ Generate Remedial Report PDF</button>
+</div>
+
+<!-- ===================== SCRIPTS ===================== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/exif.js"></script>
+<script src="js/data.js"></script>
+<script src="js/touch-signature.js"></script>
+<script src="js/remedial-report.js"></script>
+<script src="js/remedial-pdf.js"></script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js')
+            .then(r => console.log('SW registered:', r.scope))
+            .catch(e => console.log('SW failed:', e));
+    }
+
+    // ===================== IMAGE HANDLING =====================
+    window.uploadedImages = {};
+
+    function handleImageUpload(input, previewId) {
+        if (!input.files[0]) return;
+        const file = input.files[0];
+        document.getElementById(previewId).textContent = 'Processing...';
+        fixImageOrientation(file).then(data => {
+            window.uploadedImages[previewId + '_data'] = data;
+            document.getElementById(previewId).textContent = '✓ Image uploaded';
+            updateAllDots();
+        }).catch(() => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                window.uploadedImages[previewId + '_data'] = e.target.result;
+                document.getElementById(previewId).textContent = '✓ Image uploaded';
+                updateAllDots();
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function handleMultipleImageUpload(input, previewId) {
+        if (!input.files.length) return;
+        const files = Array.from(input.files);
+        document.getElementById(previewId).textContent = 'Processing ' + files.length + ' image(s)...';
+        const promises = files.map(f => fixImageOrientation(f).catch(() => new Promise(res => {
+            const r = new FileReader();
+            r.onload = e => res(e.target.result);
+            r.readAsDataURL(f);
+        })));
+        Promise.all(promises).then(results => {
+            window.uploadedImages[previewId + '_data'] = results;
+            document.getElementById(previewId).textContent = '✓ ' + results.length + ' photo(s) uploaded';
+            updateAllDots();
+        });
+    }
+
+    function fixImageOrientation(file) {
+        return new Promise((resolve, reject) => {
+            if (typeof EXIF === 'undefined') { reject(); return; }
+            EXIF.getData(file, function() {
+                const orientation = EXIF.getTag(this, 'Orientation') || 1;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const isLandscape = img.width > img.height;
+                        if (isLandscape && (orientation === 6 || orientation === 8)) {
+                            canvas.width = img.height; canvas.height = img.width;
+                            if (orientation === 6) { ctx.rotate(90 * Math.PI / 180); ctx.translate(0, -canvas.width); }
+                            else { ctx.rotate(-90 * Math.PI / 180); ctx.translate(-canvas.height, 0); }
+                        } else { canvas.width = img.width; canvas.height = img.height; }
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/jpeg', 0.65));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+    }
+
+    // ===================== BRANDING PRELOAD =====================
+    async function blobToBase64(blob) {
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+        });
+    }
+    async function preloadBrandingImages() {
+        try {
+            const [logoBlob, footerBlob] = await Promise.all([
+                fetch('./assets/Color logo - no background (px reduction).png').then(r => r.blob()),
+                fetch('./assets/es12nobackground.png').then(r => r.blob())
+            ]);
+            window._logoBase64   = await blobToBase64(logoBlob);
+            window._footerBase64 = await blobToBase64(footerBlob);
+        } catch(e) { console.error('Failed to preload branding images:', e); }
+    }
+    preloadBrandingImages();
+</script>
+
+<script>
+// ===================== COLLAPSIBLE SECTIONS =====================
+const RM_SECTION_IDS = ['sec-site','sec-repairs','sec-selected','sec-additional','sec-completion','sec-images'];
+
+const RM_SECTION_FIELDS = {
+    'sec-site':       ['siteName','siteAddress','remedialDate','remedialEngineer','siteStaffName','jobReference'],
+    'sec-repairs':    [],
+    'sec-selected':   [],
+    'sec-additional': ['additionalRepairs'],
+    'sec-completion': ['completionNotes'],
+    'sec-images':     []
+};
+
+function toggleSection(id) {
+    const section = document.getElementById(id);
+    const body = section.querySelector('.section-body');
+    const chevron = section.querySelector('.chevron');
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    chevron.textContent = isOpen ? '▾' : '▴';
+    section.classList.toggle('expanded', !isOpen);
+    const state = JSON.parse(localStorage.getItem('striker-remedial-sections') || '{}');
+    state[id] = !isOpen;
+    localStorage.setItem('striker-remedial-sections', JSON.stringify(state));
+}
+
+function restoreSectionStates() {
+    const state = JSON.parse(localStorage.getItem('striker-remedial-sections') || '{}');
+    RM_SECTION_IDS.forEach(id => {
+        const section = document.getElementById(id);
+        if (!section) return;
+        const body = section.querySelector('.section-body');
+        const chevron = section.querySelector('.chevron');
+        const open = state[id] === true;
+        body.classList.toggle('open', open);
+        chevron.textContent = open ? '▴' : '▾';
+        section.classList.toggle('expanded', open);
+    });
+}
+
+function updateStatusDot(sectionId) {
+    const dot = document.getElementById('dot-' + sectionId);
+    if (!dot) return;
+    const fields = RM_SECTION_FIELDS[sectionId] || [];
+    let filled = fields.some(id => {
+        const el = document.getElementById(id);
+        return el && el.value && el.value.trim() !== '';
+    });
+    if (sectionId === 'sec-repairs')  filled = window.selectedRepairs && window.selectedRepairs.length > 0;
+    if (sectionId === 'sec-selected') filled = window.selectedRepairs && window.selectedRepairs.length > 0;
+    if (sectionId === 'sec-images')   filled = !!(window.uploadedImages && window.uploadedImages['remedialImagesPreview_data']);
+    dot.classList.toggle('dot-filled', filled);
+    dot.classList.toggle('dot-empty', !filled);
+}
+
+function updateAllDots() { RM_SECTION_IDS.forEach(updateStatusDot); }
+
+function initSectionWatchers() {
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        el.addEventListener('change', updateAllDots);
+        el.addEventListener('input', updateAllDots);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    restoreSectionStates();
+    initSectionWatchers();
+    updateAllDots();
+    const d = document.getElementById('remedialDate');
+    if (d && !d.value) d.valueAsDate = new Date();
+    if (typeof TouchSignature !== 'undefined') {
+        window.siteStaffSignature = new TouchSignature('signatureCanvas','clearSignature','saveSignature','signatureStatus');
+    }
+    buildRepairsList();
+});
+</script>
+</body>
+</html>
