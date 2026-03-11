@@ -236,14 +236,12 @@ function rmBuildWorks(pdf, data) {
         y = rmSectionHeader(pdf, 'Works Carried Out', M, y, W) + 6;
 
         data.selectedRepairs.forEach((repair, i) => {
-            // Estimate height needed for this repair block
             const repairLines = pdf.splitTextToSize(rmSafe(repair.text), W - 12);
             const photos = data.repairImages[repair.id] || [];
-            const photoRows = Math.ceil(photos.length / 3);
-            const photoBlockH = photoRows * 46; // ~42mm per photo row + gap
-            const estimatedH  = (repairLines.length * 5.5) + photoBlockH + 14;
 
-            if (i > 0 && y + estimatedH > RM_PAGE_BOT) {
+            // Only break to new page before the repair TEXT if there's genuinely no room
+            // for at least the bullet + first line (never pre-jump for photos)
+            if (y + 10 > RM_PAGE_BOT) {
                 y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
             }
 
@@ -256,12 +254,12 @@ function rmBuildWorks(pdf, data) {
             pdf.text(String(i + 1), M + 3.5, y - 0.5, { align: 'center' });
             pdf.setTextColor(0, 0, 0);
 
-            // Repair text
+            // Repair text — break line by line
             pdf.setFontSize(9.5);
             pdf.setFont(undefined, 'normal');
             pdf.setTextColor(30, 30, 30);
             repairLines.forEach((line, li) => {
-                if (li > 0 && y > RM_PAGE_BOT - 8) {
+                if (y > RM_PAGE_BOT - 8) {
                     y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
                 }
                 pdf.text(line, M + 10, y);
@@ -269,29 +267,38 @@ function rmBuildWorks(pdf, data) {
             });
             y += 3;
 
-            // Inline photos for this repair — 3 per row, 55mm wide, 40mm tall
+            // Photos — 3 per row, 55x40mm, break to new page between ROWS (not blocks)
             if (photos.length) {
                 const imgW = 55, imgH = 40, gap = 4;
                 const perRow = 3;
-                let col = 0, rowStartY = y;
+                let col = 0;
+                let rowY = y;
 
                 photos.forEach((imgData, pi) => {
+                    // Start a new row
                     if (col === perRow) {
                         col = 0;
-                        rowStartY = y;
+                        y = rowY + imgH + gap;
+                        rowY = y;
                     }
-                    if (col === 0 && pi > 0) y += imgH + gap + 2;
-                    if (y + imgH > RM_PAGE_BOT) {
-                        y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
-                        rowStartY = y;
+                    // At start of a new row, check if it fits — if not, new page
+                    if (col === 0) {
+                        if (rowY + imgH > RM_PAGE_BOT) {
+                            y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+                            rowY = y;
+                        }
                     }
                     const xPos = M + 10 + col * (imgW + gap);
-                    rmAddImageToPDF(pdf, imgData, xPos, rowStartY, imgW, imgH, false);
+                    rmAddImageToPDF(pdf, imgData, xPos, rowY, imgW, imgH, false);
                     col++;
                 });
 
-                y = rowStartY + imgH + 6;
+                // Advance y past the last row of photos
+                y = rowY + imgH + 6;
             }
+
+            y += 5;
+        });
 
             y += 5;
         });
