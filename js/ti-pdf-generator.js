@@ -339,7 +339,7 @@ function buildInspectionSummary(pdf, data, pageTitle) {
     pdf.setFontSize(16);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(80, 80, 80);
-    pdf.text('Compliance Result', PAGE_W / 2, y, { align: 'center' });
+    pdf.text('Compliance Certification Result', PAGE_W / 2, y, { align: 'center' });
     y += 8;
 
     // PASS/FAIL — bigger text, tight pill (small padding)
