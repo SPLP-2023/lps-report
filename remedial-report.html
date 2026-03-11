@@ -134,6 +134,14 @@
         </button>
         <div class="section-body">
             <div class="form-group">
+                <label for="complianceResult">Compliance Result:</label>
+                <select id="complianceResult" onchange="updateAllDots()">
+                    <option value="">— Not applicable / no compliance determination —</option>
+                    <option value="PASS">PASS — System now compliant</option>
+                    <option value="FAIL">FAIL — System remains non-compliant</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="completionNotes">General Comments / Completion Status:</label>
                 <textarea id="completionNotes" rows="5" placeholder="Enter general comments about the remedial work, completion status, outstanding items..."></textarea>
             </div>
@@ -270,7 +278,7 @@ const RM_SECTION_FIELDS = {
     'sec-repairs':    [],
     'sec-selected':   [],
     'sec-additional': ['additionalRepairs'],
-    'sec-completion': ['completionNotes'],
+    'sec-completion': ['completionNotes', 'complianceResult'],
 };
 
 function toggleSection(id) {
