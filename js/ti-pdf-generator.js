@@ -329,7 +329,7 @@ function buildCoverPage(pdf, data) {
 // ===================== INSPECTION SUMMARY =====================
 
 function buildInspectionSummary(pdf, data, pageTitle) {
-    let y = addPageHeader(pdf, pageTitle, 'BS EN 62305 | Test & Inspection');
+    let y = addPageHeader(pdf, pageTitle, 'Test & Inspection');
 
     const { selectedFailures, generalComments, standard } = data;
     const hasFaults = selectedFailures && selectedFailures.length > 0;
