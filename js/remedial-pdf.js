@@ -238,10 +238,12 @@ function rmBuildWorks(pdf, data) {
         data.selectedRepairs.forEach((repair, i) => {
             const repairLines = pdf.splitTextToSize(rmSafe(repair.text), W - 12);
             const photos = data.repairImages[repair.id] || [];
+            const textH = repairLines.length * 5.5 + 6;
+            const firstRowH = photos.length ? 40 + 4 : 0; // one photo row height
+            const minBlockH = textH + firstRowH; // text must stay with at least its first photo row
 
-            // Only break to new page before the repair TEXT if there's genuinely no room
-            // for at least the bullet + first line (never pre-jump for photos)
-            if (y + 10 > RM_PAGE_BOT) {
+            // Break before this repair if text + first photo row won't fit together
+            if (y + minBlockH > RM_PAGE_BOT) {
                 y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
             }
 
@@ -267,10 +269,17 @@ function rmBuildWorks(pdf, data) {
             });
             y += 3;
 
-            // Photos — 3 per row, 55x40mm, break to new page between ROWS (not blocks)
+            // Photos — 3 per row, 55x40mm
+            // If photos exist and first row won't fit on this page, start fresh
             if (photos.length) {
                 const imgW = 55, imgH = 40, gap = 4;
                 const perRow = 3;
+
+                // If there's no room for even one photo row, move to a new page
+                if (y + imgH > RM_PAGE_BOT) {
+                    y = rmNewPage(pdf, 'REMEDIAL WORKS (CONTINUED)', 'Lightning Protection Remedial Report');
+                }
+
                 let col = 0;
                 let rowY = y;
 
