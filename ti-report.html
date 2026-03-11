@@ -23,8 +23,12 @@
     <h1>Test &amp; Inspection Report</h1>
 
     <!-- ===================== SITE INFORMATION ===================== -->
-    <div class="section">
-        <h2>Site Information</h2>
+    <div class="section" id="sec-site">
+        <button class="section-header" onclick="toggleSection('sec-site')">
+            <span class="section-title">📋 Site Information</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-site"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
         <div class="form-row">
             <div class="form-group">
                 <label for="siteAddress">Site Address:</label>
@@ -78,11 +82,16 @@
                 <div id="buildingImagePreview">Click to upload building image</div>
             </div>
         </div>
+        </div>
     </div>
 
     <!-- ===================== STANDARD & FAILURES ===================== -->
-    <div class="section">
-        <h2>Standard Selection &amp; Failures</h2>
+    <div class="section" id="sec-standard">
+        <button class="section-header" onclick="toggleSection('sec-standard')">
+            <span class="section-title">⚡ Standard Selection &amp; Failures</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-standard"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
         <div class="form-group standards-dropdown">
             <label for="standard">Select Standard:</label>
             <select id="standard" onchange="updateFailuresList()">
@@ -97,25 +106,40 @@
             <label>Available Failures for Selected Standard:</label>
             <div id="failuresList" class="failures-list"></div>
         </div>
+        </div>
     </div>
 
-    <div class="section">
-        <h2>⚠ Selected Failures &amp; Comments</h2>
+    <div class="section" id="sec-selected">
+        <button class="section-header" onclick="toggleSection('sec-selected')">
+            <span class="section-title">⚠ Selected Failures &amp; Comments</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-selected"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
         <div id="selectedFailures"></div>
+        </div>
     </div>
 
     <!-- ===================== RECOMMENDATIONS ===================== -->
-    <div class="section">
-        <h2>Recommendations</h2>
+    <div class="section" id="sec-recommendations">
+        <button class="section-header" onclick="toggleSection('sec-recommendations')">
+            <span class="section-title">💬 Recommendations</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-recommendations"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
         <div class="form-group">
             <label for="generalComments">Additional Comments &amp; Recommendations:</label>
             <textarea id="generalComments" rows="4" placeholder="Enter any additional observations, recommendations, or general comments..."></textarea>
         </div>
+        </div>
     </div>
 
     <!-- ===================== STRUCTURE DETAILS ===================== -->
-    <div class="section">
-        <h2>Structure Details</h2>
+    <div class="section" id="sec-structure">
+        <button class="section-header" onclick="toggleSection('sec-structure')">
+            <span class="section-title">🏗 Structure Details</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-structure"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
         <div class="form-row">
             <div class="form-group">
                 <label for="structureHeight">1. Structure Height (m):</label>
@@ -234,11 +258,16 @@
                 </select>
             </div>
         </div>
+        </div>
     </div>
 
     <!-- ===================== SYSTEM DETAILS ===================== -->
-    <div class="section">
-        <h2>System Details</h2>
+    <div class="section" id="sec-system">
+        <button class="section-header" onclick="toggleSection('sec-system')">
+            <span class="section-title">⚙️ System Details</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-system"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
 
         <div class="form-row">
             <div class="form-group">
@@ -375,11 +404,16 @@
                 </select>
             </div>
         </div>
+        </div>
     </div>
 
     <!-- ===================== EARTH RESISTANCE TESTING ===================== -->
-    <div class="section">
-        <h2>Earth Resistance Test</h2>
+    <div class="section" id="sec-earth">
+        <button class="section-header" onclick="toggleSection('sec-earth')">
+            <span class="section-title">🔌 Earth Resistance Test</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-earth"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
         <div class="form-group">
             <label>
                 <input type="checkbox" id="partOfLargerSystem"> Part of a larger system
@@ -422,21 +456,32 @@
                 <div id="earthImagesPreview">Click to upload earth test images</div>
             </div>
         </div>
+        </div>
     </div>
 
     <!-- ===================== GENERAL COMMENTS ===================== -->
-    <div class="section">
-        <h2>General Comments</h2>
+    <div class="section" id="sec-comments">
+        <button class="section-header" onclick="toggleSection('sec-comments')">
+            <span class="section-title">📝 General Comments</span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-comments"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
         <div class="form-group">
             <label for="finalComments">General Comments:</label>
             <textarea id="finalComments" rows="4" placeholder="Enter any general comments, observations, or conclusions..."></textarea>
         </div>
+        </div>
     </div>
 
-    <!-- Buttons -->
-    <button id="generateReport" onclick="generatePDF()">Generate PDF Report</button>
+    <!-- Spacer so sticky button doesn't overlap last section -->
+    <div style="height: 80px;"></div>
 
 </div><!-- /container -->
+
+<!-- Sticky Generate Button -->
+<div class="sticky-generate">
+    <button id="generateReport" onclick="generatePDF()">⚡ Generate PDF Report</button>
+</div>
 
 <!-- ===================== SCRIPTS ===================== -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -478,5 +523,117 @@
 
     preloadBrandingImages();
 </script>
-</body>
-</html>
+
+<script>
+// ===================== COLLAPSIBLE SECTIONS =====================
+const SECTION_IDS = ['sec-site','sec-standard','sec-selected','sec-recommendations','sec-structure','sec-system','sec-earth','sec-comments'];
+
+// Fields to watch per section for status dot
+const SECTION_FIELDS = {
+    'sec-site':            ['siteAddress','testDate','engineerName','testKitRef','jobReference','siteStaffName'],
+    'sec-standard':        ['standard'],
+    'sec-selected':        [], // dynamic content — watch selectedFailures div
+    'sec-recommendations': ['generalComments'],
+    'sec-structure':       ['structureHeight','structurePerimeter','structureUse','structureOccupancy','structureAge','previousInspections'],
+    'sec-system':          ['earthArrangement','mainEquipotentialBond','surgeInstalled','surgeType','surgeSafe'],
+    'sec-earth':           ['numEarths'],
+    'sec-comments':        ['finalComments']
+};
+
+function toggleSection(id) {
+    const section = document.getElementById(id);
+    const body = section.querySelector('.section-body');
+    const chevron = section.querySelector('.chevron');
+    const isOpen = body.classList.contains('open');
+
+    body.classList.toggle('open', !isOpen);
+    chevron.textContent = isOpen ? '▾' : '▴';
+    section.classList.toggle('expanded', !isOpen);
+
+    // Save state
+    const state = JSON.parse(localStorage.getItem('striker-sections') || '{}');
+    state[id] = !isOpen;
+    localStorage.setItem('striker-sections', JSON.stringify(state));
+}
+
+function restoreSectionStates() {
+    const state = JSON.parse(localStorage.getItem('striker-sections') || '{}');
+    SECTION_IDS.forEach(id => {
+        const section = document.getElementById(id);
+        if (!section) return;
+        const body = section.querySelector('.section-body');
+        const chevron = section.querySelector('.chevron');
+        const open = state[id] === true;
+        body.classList.toggle('open', open);
+        chevron.textContent = open ? '▴' : '▾';
+        section.classList.toggle('expanded', open);
+    });
+}
+
+function updateStatusDot(sectionId) {
+    const dot = document.getElementById('dot-' + sectionId);
+    if (!dot) return;
+    const fields = SECTION_FIELDS[sectionId] || [];
+    let filled = fields.some(id => {
+        const el = document.getElementById(id);
+        return el && el.value && el.value.trim() !== '';
+    });
+
+    // Special cases
+    if (sectionId === 'sec-selected') {
+        const sf = document.getElementById('selectedFailures');
+        filled = sf && sf.children.length > 0;
+    }
+    if (sectionId === 'sec-site') {
+        // Also check signature saved
+        filled = filled || (window._signatureSaved === true);
+    }
+    if (sectionId === 'sec-structure') {
+        // Check any selection pill active
+        const lists = ['groundTypeList','boundaryTypeList','roofTypeList','roofLayoutList'];
+        filled = filled || lists.some(lid => {
+            const el = document.getElementById(lid);
+            return el && el.querySelector('.failure-option.selected');
+        });
+    }
+    if (sectionId === 'sec-system') {
+        const lists = ['airTerminationList','airConductorsList','downConductorNetworkList','downConductorsList','earthTerminationList'];
+        filled = filled || lists.some(lid => {
+            const el = document.getElementById(lid);
+            return el && el.querySelector('.failure-option.selected');
+        });
+    }
+    if (sectionId === 'sec-earth') {
+        const n = document.getElementById('numEarths');
+        filled = n && n.value && parseInt(n.value) > 0;
+    }
+
+    dot.classList.toggle('dot-filled', filled);
+    dot.classList.toggle('dot-empty', !filled);
+}
+
+function updateAllDots() {
+    SECTION_IDS.forEach(updateStatusDot);
+}
+
+function initSectionWatchers() {
+    // Watch all inputs/selects/textareas
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        el.addEventListener('change', updateAllDots);
+        el.addEventListener('input', updateAllDots);
+    });
+
+    // Watch selectedFailures div mutations
+    const sf = document.getElementById('selectedFailures');
+    if (sf) {
+        new MutationObserver(updateAllDots).observe(sf, { childList: true, subtree: true });
+    }
+}
+
+// Run on load
+document.addEventListener('DOMContentLoaded', () => {
+    restoreSectionStates();
+    initSectionWatchers();
+    updateAllDots();
+});
+</script>
