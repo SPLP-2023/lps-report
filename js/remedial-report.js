@@ -370,3 +370,102 @@ function renderSelectedRepairs() {
             </div>`;
     }).join('');
 }
+
+// ===================== AUTO-SAVE CONFIG =====================
+function initRemedialAutoSave() {
+    initAutoSave({
+        storageKey: 'splp_remedial_autosave_v1',
+        fields: [
+            'siteName','jobReference','siteAddress','remedialDate',
+            'remedialEngineer','siteStaffName','additionalRepairs',
+            'completionNotes','complianceResult'
+        ],
+        checkboxes: [],
+        signature: 'siteStaffSignature',
+        dateFields: ['remedialDate'],
+        onSave: () => {
+            // Save selected repairs, their qty/earth inputs, and images
+            const repairInputs = {};
+            window.selectedRepairs.forEach(r => {
+                if (!r.custom) {
+                    const qtyEl   = document.getElementById('qty-'   + r.id);
+                    const earthEl = document.getElementById('earth-' + r.id);
+                    if (qtyEl)   repairInputs['qty-'   + r.id] = qtyEl.value;
+                    if (earthEl) repairInputs['earth-' + r.id] = earthEl.value;
+                }
+            });
+            return {
+                _selectedRepairs: window.selectedRepairs,
+                _repairInputs:    repairInputs,
+                _imageStore:      window.imageStore || {}
+            };
+        },
+        onRestore: (d) => {
+            // Restore image store first
+            if (d._imageStore) {
+                window.imageStore = d._imageStore;
+                // Update building image preview
+                if (d._imageStore['building']) {
+                    const el = document.getElementById('buildingImagePreview');
+                    if (el) el.textContent = '✓ Image restored';
+                }
+            }
+            // Restore selected repairs
+            if (Array.isArray(d._selectedRepairs) && d._selectedRepairs.length) {
+                window.selectedRepairs = d._selectedRepairs;
+
+                // Re-tick catalogue checkboxes and show their input/photo rows
+                d._selectedRepairs.forEach(r => {
+                    if (!r.custom) {
+                        const chk  = document.getElementById('chk-'        + r.id);
+                        const item = document.getElementById('repair-item-' + r.id);
+                        const inputsRow = document.getElementById('inputs-row-' + r.id);
+                        const photoRow  = document.getElementById('photo-row-'  + r.id);
+                        if (chk)  chk.checked = true;
+                        if (item) item.classList.add('rm-selected');
+                        if (inputsRow) inputsRow.style.display = 'flex';
+                        if (photoRow)  photoRow.style.display  = 'flex';
+                        // Restore qty / earth values
+                        if (d._repairInputs) {
+                            const qtyEl   = document.getElementById('qty-'   + r.id);
+                            const earthEl = document.getElementById('earth-' + r.id);
+                            if (qtyEl   && d._repairInputs['qty-'   + r.id]) qtyEl.value   = d._repairInputs['qty-'   + r.id];
+                            if (earthEl && d._repairInputs['earth-' + r.id]) earthEl.value = d._repairInputs['earth-' + r.id];
+                        }
+                        // Restore photo count badge
+                        const imgs = (window.imageStore || {})['repair-' + r.id];
+                        if (imgs) {
+                            const count = Array.isArray(imgs) ? imgs.length : 1;
+                            const prev  = document.getElementById('repair-img-preview-' + r.id);
+                            if (prev) prev.textContent = '✓ ' + count + ' photo(s)';
+                        }
+                    }
+                });
+
+                renderSelectedRepairs();
+            }
+            if (typeof updateAllDots === 'function') setTimeout(updateAllDots, 200);
+        },
+        clearExtra: () => {
+            window.selectedRepairs = [];
+            window.imageStore = {};
+            // Untick all catalogue checkboxes and hide their rows
+            REPAIRS_CATALOGUE.forEach(r => {
+                const chk  = document.getElementById('chk-'        + r.id);
+                const item = document.getElementById('repair-item-' + r.id);
+                const inputsRow = document.getElementById('inputs-row-' + r.id);
+                const photoRow  = document.getElementById('photo-row-'  + r.id);
+                if (chk)  chk.checked = false;
+                if (item) item.classList.remove('rm-selected');
+                if (inputsRow) inputsRow.style.display = 'none';
+                if (photoRow)  photoRow.style.display  = 'none';
+                const prev = document.getElementById('repair-img-preview-' + r.id);
+                if (prev) prev.textContent = '';
+            });
+            renderSelectedRepairs();
+            const bp = document.getElementById('buildingImagePreview');
+            if (bp) bp.textContent = 'Click to upload building photo';
+            if (typeof updateAllDots === 'function') updateAllDots();
+        }
+    });
+}
