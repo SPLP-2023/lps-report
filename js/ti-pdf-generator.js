@@ -104,12 +104,15 @@ function addFooterToPage(pdf) {
         if (window._footerBase64) addImageToPDF(pdf, window._footerBase64, PAGE_W/2 - 36, 263, 72, 18, false);
     } catch (e) { /* */ }
 
-    // Footer text
+    // Footer text — centred vertically in the navy bar
     pdf.setFontSize(5.5);
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(160, 190, 210);
     const lines = pdf.splitTextToSize(COMPANY_FOOTER, 180);
-    pdf.text(lines, PAGE_W / 2, barY + 11, { align: 'center' });
+    const lineH = 3.5;
+    const textBlockH = lines.length * lineH;
+    const textY = barY + (barH / 2) - (textBlockH / 2) + lineH;
+    pdf.text(lines, PAGE_W / 2, textY, { align: 'center', lineHeightFactor: 1.3 });
     pdf.setTextColor(0, 0, 0);
 }
 
@@ -128,13 +131,13 @@ function newPage(pdf, title, subtitle) {
  * Draw a section header bar (blue).
  */
 function drawSectionHeader(pdf, label, x, y, w) {
-    const h = 7;
+    const h = 9;
     pdf.setFillColor(...BLUE_ACCENT);
     pdf.rect(x, y, w, h, 'F');
-    pdf.setFontSize(7);
+    pdf.setFontSize(8.5);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(255, 255, 255);
-    pdf.text(label, x + 3, y + 4.8);
+    pdf.text(label, x + 3, y + 6.2);
     pdf.setTextColor(0, 0, 0);
     return y + h;
 }
@@ -144,7 +147,7 @@ function drawSectionHeader(pdf, label, x, y, w) {
  * Returns Y after table.
  */
 function drawTable(pdf, rows, x, y, w) {
-    const rowH = 8;
+    const rowH = 11;
     const labelW = w * 0.44;
     const valW   = w - labelW;
 
@@ -154,18 +157,18 @@ function drawTable(pdf, rows, x, y, w) {
         pdf.rect(x, y, w, rowH, 'F');
 
         // Label
-        pdf.setFontSize(7.5);
+        pdf.setFontSize(8.5);
         pdf.setFont(undefined, 'bold');
         pdf.setTextColor(60, 60, 60);
         const labelLines = pdf.splitTextToSize(row[0], labelW - 4);
-        pdf.text(labelLines[0], x + 2, y + 5.5);
+        pdf.text(labelLines[0], x + 2, y + 7);
 
         // Value
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(20, 20, 20);
         const valText = row[1] || '-';
         const valLines = pdf.splitTextToSize(valText, valW - 4);
-        pdf.text(valLines[0], x + labelW + 2, y + 5.5);
+        pdf.text(valLines[0], x + labelW + 2, y + 7);
 
         y += rowH;
     });
@@ -227,28 +230,29 @@ function buildCoverPage(pdf, data) {
     pdf.text('TEST & INSPECTION REPORT', PAGE_W / 2, logoY + 18, { align: 'center' });
     logoY += cardH + 4;
 
-    // Standard bar
-    if (standard) {
-        pdf.setFillColor(...BLUE_ACCENT);
-        pdf.rect(cardX, logoY, cardW, 8, 'F');
-        pdf.setFontSize(8);
-        pdf.setFont(undefined, 'bold');
-        pdf.setTextColor(255, 255, 255);
-        pdf.text(standard, PAGE_W / 2, logoY + 5.5, { align: 'center' });
-        logoY += 8 + 6;
+    // Job Reference + Address block (centred, between title card and info table)
+    logoY += 5;
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(...NAVY);
+    pdf.text(jobReference || '-', PAGE_W / 2, logoY + 6, { align: 'center' });
+    logoY += 10;
+
+    if (siteAddress) {
+        pdf.setFontSize(9);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(90, 90, 90);
+        const addrBlock = pdf.splitTextToSize(siteAddress, cardW - 10);
+        pdf.text(addrBlock, PAGE_W / 2, logoY, { align: 'center', lineHeightFactor: 1.5 });
+        logoY += addrBlock.length * 5 + 4;
     } else {
         logoY += 6;
     }
 
-    // Info card
-    const rowH = 16;
-    const numRows = 4; // Job Ref/Date, Engineer/Kit, Site Staff/Sig, Site Address
+    // Info card — 3 rows: Job Ref/Date, Engineer/Kit Ref, Site Staff/Signature
+    const rowH = 18;
+    const infoH = rowH * 3;
 
-    // Calculate address height dynamically
-    const addrLines = pdf.splitTextToSize(data.siteAddress || '-', cardW - 10);
-    const addrRowH = Math.max(rowH, 6 + addrLines.length * 5);
-
-    const infoH = (rowH * 3) + addrRowH + (siteStaffSignature ? 6 : 2);
     pdf.setFillColor(250, 252, 255);
     pdf.rect(cardX, logoY, cardW, infoH, 'F');
     pdf.setDrawColor(...BLUE_ACCENT);
@@ -263,53 +267,50 @@ function buildCoverPage(pdf, data) {
 
     const col1X = cardX + 5;
     const col2X = cardX + cardW / 2 + 5;
+    const colW  = cardW / 2 - 10;
     const labelColor = [100, 130, 160];
     const valueColor = [20, 20, 20];
 
-    function infoField(label, value, x, y, maxW) {
-        const colW = maxW || (cardW / 2) - 10;
-        pdf.setFontSize(6.5);
+    function infoField(label, value, x, fy) {
+        pdf.setFontSize(7);
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(...labelColor);
-        pdf.text(label.toUpperCase(), x, y + 3);
-        pdf.setFontSize(9);
+        pdf.text(label.toUpperCase(), x, fy + 4);
+        pdf.setFontSize(10);
         pdf.setFont(undefined, 'bold');
         pdf.setTextColor(...valueColor);
         const lines = pdf.splitTextToSize(value || '-', colW);
-        pdf.text(lines, x, y + 10, { lineHeightFactor: 1.4 });
+        pdf.text(lines[0], x, fy + 12);
     }
 
-    // Draw rows with dividers between them
-    let iy = logoY;
-    const rows = [
+    const tableRows = [
         [['Job Reference', jobReference], ['Date', formatDate(testDate)]],
-        [['Engineer', engineerName],      ['Test Kit Ref', testKitRef]],
-        [['Site Staff', siteStaffName],   siteStaffSignature ? null : ['', '']],
-        [['Site Address', siteAddress],   null],
+        [['Engineer',      engineerName], ['Test Kit Ref', testKitRef]],
+        [['Site Staff',    siteStaffName], null],
     ];
-    const rowHeights = [rowH, rowH, rowH, addrRowH];
 
-    rows.forEach((row, i) => {
-        // Horizontal divider above each row (except first)
+    let iy = logoY;
+    tableRows.forEach((row, i) => {
         if (i > 0) {
             pdf.setDrawColor(210, 225, 240);
             pdf.setLineWidth(0.3);
             pdf.line(cardX + 1, iy, cardX + cardW - 1, iy);
         }
-        // Address row spans full width (no right column)
-        const isAddrRow = i === 3;
-        infoField(row[0][0], row[0][1], col1X, iy, isAddrRow ? cardW - 10 : undefined);
-        if (!isAddrRow && row[1] && row[1][0]) infoField(row[1][0], row[1][1], col2X, iy);
+        infoField(row[0][0], row[0][1], col1X, iy);
 
-        // Signature on row 2 right column
-        if (i === 2 && siteStaffSignature) {
-            pdf.setFontSize(6.5);
+        // Right column: signature on row 2, otherwise standard field
+        if (i === 2) {
+            pdf.setFontSize(7);
             pdf.setFont(undefined, 'normal');
             pdf.setTextColor(...labelColor);
-            pdf.text('SITE STAFF SIGNATURE', col2X, iy + 3);
-            try { pdf.addImage(siteStaffSignature, 'PNG', col2X, iy + 4, 50, 10); } catch(e) {}
+            pdf.text('SITE STAFF SIGNATURE', col2X, iy + 4);
+            if (siteStaffSignature) {
+                try { pdf.addImage(siteStaffSignature, 'PNG', col2X, iy + 5, 50, 11); } catch(e) {}
+            }
+        } else {
+            infoField(row[1][0], row[1][1], col2X, iy);
         }
-        iy += rowHeights[i];
+        iy += rowH;
     });
 
     // Footer
@@ -334,19 +335,29 @@ function buildInspectionSummary(pdf, data, pageTitle) {
 
     // PASS/FAIL pill-sized banner
     const bannerLabel = hasFaults ? 'FAIL — Action Required' : 'PASS';
-    pdf.setFontSize(14);
+    pdf.setFontSize(22);
     pdf.setFont(undefined, 'bold');
-    const labelW = pdf.getTextWidth(bannerLabel) + 18;
-    const bannerH = 13;
+    const labelW = pdf.getTextWidth(bannerLabel) + 24;
+    const bannerH = 18;
     const bannerX = (PAGE_W - labelW) / 2;
     pdf.setFillColor(...(hasFaults ? [200, 40, 40] : [34, 139, 34]));
     pdf.rect(bannerX, y, labelW, bannerH, 'F');
     pdf.setTextColor(255, 255, 255);
-    pdf.text(bannerLabel, PAGE_W / 2, y + 9, { align: 'center' });
+    pdf.text(bannerLabel, PAGE_W / 2, y + 13, { align: 'center' });
     pdf.setTextColor(0, 0, 0);
     y += bannerH + 6;
 
-    pdf.setFontSize(7.5);
+    // Standard Applied
+    if (standard) {
+        pdf.setFontSize(11);
+        pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(40, 40, 40);
+        pdf.text('Standard Applied: ' + standard, PAGE_W / 2, y, { align: 'center' });
+        y += 7;
+    }
+
+    // Certificate validity / action required line
+    pdf.setFontSize(10);
     pdf.setFont(undefined, 'italic');
     pdf.setTextColor(80, 80, 80);
     if (hasFaults) {
@@ -354,20 +365,20 @@ function buildInspectionSummary(pdf, data, pageTitle) {
     } else {
         pdf.text('This certificate is valid for 12 months from the date of issue.', PAGE_W / 2, y, { align: 'center' });
         if (generalComments) {
-            y += 4;
+            y += 6;
             pdf.text('(with recommendations)', PAGE_W / 2, y, { align: 'center' });
         }
     }
     pdf.setTextColor(0, 0, 0);
-    y += 6;
+    y += 8;
 
-    pdf.setFontSize(7);
+    pdf.setFontSize(9);
     pdf.setFont(undefined, 'italic');
     pdf.setTextColor(120, 120, 120);
     pdf.text('All tests are in accordance with BS EN 62305, BS6651, NF C 17-102:2011 and BS7430.', PAGE_W / 2, y, { align: 'center' });
-    y += 3;
+    y += 5;
     pdf.text('Lightning protection systems should be tested annually under The Electricity At Work Act 1989.', PAGE_W / 2, y, { align: 'center' });
-    y += 8;
+    y += 10;
     pdf.setTextColor(0, 0, 0);
 
     // Defects
@@ -448,12 +459,12 @@ function buildInspectionSummary(pdf, data, pageTitle) {
 
         y = Math.max(leftY, rightY) + 4;
     } else {
-        pdf.setFontSize(11);
-        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(16);
+        pdf.setFont(undefined, 'bold');
         pdf.setTextColor(34, 139, 34);
         pdf.text('No faults identified during this inspection.', PAGE_W / 2, y, { align: 'center' });
         pdf.setTextColor(0, 0, 0);
-        y += 12;
+        y += 14;
     }
 
     // Recommendations
