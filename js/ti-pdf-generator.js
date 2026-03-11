@@ -200,7 +200,7 @@ function drawTable(pdf, rows, x, y, w) {
 // ===================== COVER PAGE =====================
 
 function buildCoverPage(pdf, data) {
-    const { siteAddress, testDate, engineerName, testKitRef, jobReference, siteStaffName, siteStaffSignature, standard } = data;
+    const { siteName, siteAddress, testDate, engineerName, testKitRef, jobReference, siteStaffName, siteStaffSignature, standard } = data;
 
     // Top navy bar
     pdf.setFillColor(...NAVY);
@@ -223,7 +223,7 @@ function buildCoverPage(pdf, data) {
         } catch (e) { logoY += 6; }
     }
 
-    // Job Reference + Address block
+    // Site Name + Address block
     const cardX = MARGIN;
     const cardW = PAGE_W - MARGIN * 2;
     const addrBlock = siteAddress ? pdf.splitTextToSize(siteAddress, cardW - 10) : [];
@@ -232,7 +232,7 @@ function buildCoverPage(pdf, data) {
     pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(...NAVY);
-    pdf.text(jobReference || '-', PAGE_W / 2, logoY + 6, { align: 'center' });
+    pdf.text(siteName || jobReference || '-', PAGE_W / 2, logoY + 6, { align: 'center' });
     logoY += 10;
 
     if (addrBlock.length > 0) {
@@ -293,9 +293,9 @@ function buildCoverPage(pdf, data) {
     }
 
     const tableRows = [
-        [['Site Name',  jobReference], ['Date', formatDate(testDate)]],
-        [['Engineer',   engineerName], ['Test Kit Ref', testKitRef]],
-        [['Site Staff', siteStaffName], null],
+        [['Job Reference', jobReference], ['Date', formatDate(testDate)]],
+        [['Engineer',      engineerName], ['Test Kit Ref', testKitRef]],
+        [['Site Staff',    siteStaffName], null],
     ];
 
     let iy = logoY;
@@ -339,7 +339,7 @@ function buildInspectionSummary(pdf, data, pageTitle) {
     pdf.setFontSize(16);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(80, 80, 80);
-    pdf.text('Compliance Certification Result', PAGE_W / 2, y, { align: 'center' });
+    pdf.text('Compliance Result', PAGE_W / 2, y, { align: 'center' });
     y += 8;
 
     // PASS/FAIL — bigger text, tight pill (small padding)
@@ -748,6 +748,7 @@ async function generatePDF() {
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     // --- Collect all form data ---
+    const siteName            = document.getElementById('siteName')?.value || '';
     const siteAddress        = document.getElementById('siteAddress')?.value || '';
     const testDate           = document.getElementById('testDate')?.value || '';
     const engineerName       = document.getElementById('engineerName')?.value || '';
@@ -775,7 +776,7 @@ async function generatePDF() {
     const earthData          = getEarthTableData();
 
     const coverData = {
-        siteAddress, testDate, engineerName, testKitRef, jobReference,
+        siteName, siteAddress, testDate, engineerName, testKitRef, jobReference,
         siteStaffName, siteStaffSignature, standard, buildingImage
     };
 
@@ -819,10 +820,10 @@ async function generatePDF() {
         buildInspectionImages(pdf, allImages);
     }
 
-    // --- Filename: Lightning Protection T&I Report - [JobRef] [dd-mm-yy].pdf ---
+    // --- Filename: Lightning Protection T&I Report - [SiteName] [dd-mm-yy].pdf ---
     const datePart = formatDateShort(testDate);
-    const refPart = jobReference ? jobReference.replace(/[^a-zA-Z0-9 \-_]/g, '').trim() : 'Report';
-    const filename = `Lightning Protection T&I Report - ${refPart} ${datePart}.pdf`;
+    const namePart = (siteName || jobReference || 'Report').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
+    const filename = `Lightning Protection T&I Report - ${namePart} ${datePart}.pdf`;
 
     pdf.save(filename);
 }
