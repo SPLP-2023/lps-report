@@ -485,7 +485,7 @@ function buildInspectionSummary(pdf, data, pageTitle) {
         y += 16;
     }
 
-    // Recommendations — numbered list with inline photos (same as remedial works page)
+    // Recommendations — numbered list with inline photos (same logic as remedial works page)
     const recs = data.selectedRecommendations || [];
     const recImages = data.recommendationImages || {};
     if (recs.length > 0) {
@@ -494,15 +494,16 @@ function buildInspectionSummary(pdf, data, pageTitle) {
             addFooterToPage(pdf);
             y = addPageHeader(pdf, 'INSPECTION SUMMARY (CONTINUED)', 'Test & Inspection');
         }
-        y = drawSectionHeader(pdf, 'RECOMMENDATIONS', MARGIN, y, PAGE_W - MARGIN * 2) + 5;
+        y = drawSectionHeader(pdf, 'RECOMMENDATIONS', MARGIN, y, PAGE_W - MARGIN * 2) + 8;
 
         recs.forEach((rec, i) => {
-            const recLines = pdf.splitTextToSize(rec.text, PAGE_W - MARGIN * 2 - 12);
-            const photos   = recImages[rec.id] || [];
-            const textH    = recLines.length * 5.5 + 6;
-            const firstRowH = photos.length ? 44 : 0;
+            const recLines  = pdf.splitTextToSize(rec.text, PAGE_W - MARGIN * 2 - 12);
+            const photos    = recImages[rec.id] || [];
+            const textH     = recLines.length * 5.5 + 6;
+            const firstRowH = photos.length ? 40 + 4 : 0;
             const minBlockH = textH + firstRowH;
 
+            // Break before this rec if text + first photo row won't fit together
             if (y + minBlockH > PAGE_BOT) {
                 pdf.addPage();
                 addFooterToPage(pdf);
@@ -518,7 +519,7 @@ function buildInspectionSummary(pdf, data, pageTitle) {
             pdf.text(String(i + 1), MARGIN + 3.5, y - 0.5, { align: 'center' });
             pdf.setTextColor(0, 0, 0);
 
-            // Text
+            // Text — break line by line
             pdf.setFontSize(9.5);
             pdf.setFont(undefined, 'normal');
             pdf.setTextColor(30, 30, 30);
@@ -533,15 +534,24 @@ function buildInspectionSummary(pdf, data, pageTitle) {
             });
             y += 3;
 
-            // Inline photos
+            // Photos — 3 per row, break on row boundaries only
             if (photos.length) {
                 const imgW = 55, imgH = 40, gap = 4, perRow = 3;
+
+                // If first photo row won't fit, new page before photos
                 if (y + imgH > PAGE_BOT) {
+                    pdf.addPage();
+                    addFooterToPage(pdf);
                     y = addPageHeader(pdf, 'INSPECTION SUMMARY (CONTINUED)', 'Test & Inspection');
                 }
+
                 let col = 0, rowY = y;
-                photos.forEach((imgData) => {
-                    if (col === perRow) { col = 0; y = rowY + imgH + gap; rowY = y; }
+                photos.forEach(imgData => {
+                    if (col === perRow) {
+                        col = 0;
+                        y = rowY + imgH + gap;
+                        rowY = y;
+                    }
                     if (col === 0 && rowY + imgH > PAGE_BOT) {
                         pdf.addPage();
                         addFooterToPage(pdf);
@@ -553,6 +563,7 @@ function buildInspectionSummary(pdf, data, pageTitle) {
                 });
                 y = rowY + imgH + 6;
             }
+
             y += 5;
         });
     }
@@ -683,7 +694,7 @@ function renderEarthTable(pdf, rows, y) {
     const headers     = ['E', 'Ohms', 'Test Clamp', 'Pit', 'Test Type', 'Ground', 'Earth Type', 'Comment'];
     const rowH        = 9;
     const headerH     = 11;
-    const rowsPerPage = 25;
+    const rowsPerPage = 23;
     let rowsOnPage    = 0;
     let tableStartY   = y;
 
