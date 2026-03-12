@@ -74,15 +74,17 @@ function addPageHeader(pdf, title, subtitle) {
 
     // Title centred
     pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(10);
+    pdf.setFontSize(13);
     pdf.setFont(undefined, 'bold');
-    pdf.text(title, PAGE_W / 2, 10, { align: 'center' });
+    pdf.text(title, PAGE_W / 2, 11, { align: 'center' });
 
     if (subtitle) {
         pdf.setFontSize(7);
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(180, 210, 235);
-        pdf.text(subtitle, PAGE_W / 2, 15, { align: 'center' });
+        // Strip "BS EN 62305 | " prefix from subtitle
+        const cleanSubtitle = subtitle.replace(/^BS EN 62305\s*\|\s*/i, '');
+        pdf.text(cleanSubtitle, PAGE_W / 2, 16, { align: 'center' });
     }
 
     pdf.setTextColor(0, 0, 0);
@@ -229,18 +231,18 @@ function buildCoverPage(pdf, data) {
     const addrBlock = siteAddress ? pdf.splitTextToSize(siteAddress, cardW - 10) : [];
 
     logoY += 4;
-    pdf.setFontSize(14);
+    pdf.setFontSize(18);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(...NAVY);
     pdf.text(siteName || jobReference || '-', PAGE_W / 2, logoY + 6, { align: 'center' });
-    logoY += 10;
+    logoY += 12;
 
     if (addrBlock.length > 0) {
-        pdf.setFontSize(9);
+        pdf.setFontSize(11);
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(90, 90, 90);
         pdf.text(addrBlock, PAGE_W / 2, logoY, { align: 'center', lineHeightFactor: 1.5 });
-        logoY += addrBlock.length * 5;
+        logoY += addrBlock.length * 6;
     }
     logoY += 6;
 
@@ -281,15 +283,15 @@ function buildCoverPage(pdf, data) {
     const valueColor = [20, 20, 20];
 
     function infoField(label, value, x, fy) {
-        pdf.setFontSize(7);
+        pdf.setFontSize(8);
         pdf.setFont(undefined, 'normal');
         pdf.setTextColor(...labelColor);
         pdf.text(label.toUpperCase(), x, fy + 4);
-        pdf.setFontSize(10);
+        pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
         pdf.setTextColor(...valueColor);
         const lines = pdf.splitTextToSize(value || '-', colW);
-        pdf.text(lines[0], x, fy + 12);
+        pdf.text(lines[0], x, fy + 13);
     }
 
     const tableRows = [
@@ -329,7 +331,7 @@ function buildCoverPage(pdf, data) {
 // ===================== INSPECTION SUMMARY =====================
 
 function buildInspectionSummary(pdf, data, pageTitle) {
-    let y = addPageHeader(pdf, pageTitle, 'Test & Inspection');
+    let y = addPageHeader(pdf, pageTitle, 'BS EN 62305 | Test & Inspection');
 
     const { selectedFailures, generalComments, standard } = data;
     const hasFaults = selectedFailures && selectedFailures.length > 0;
@@ -373,7 +375,7 @@ function buildInspectionSummary(pdf, data, pageTitle) {
         pdf.text('Action is required for this system to comply with ' + (standard || 'the applicable standard') + '.', PAGE_W / 2, y, { align: 'center' });
     } else {
         pdf.text('This certificate is valid for 12 months from the date of issue.', PAGE_W / 2, y, { align: 'center' });
-        if (generalComments) {
+        if (data.selectedRecommendations && data.selectedRecommendations.length > 0) {
             y += 7;
             pdf.text('(with recommendations)', PAGE_W / 2, y, { align: 'center' });
         }
@@ -483,19 +485,76 @@ function buildInspectionSummary(pdf, data, pageTitle) {
         y += 16;
     }
 
-    // Recommendations
-    if (generalComments) {
-        if (y + 30 > PAGE_BOT) {
+    // Recommendations — numbered list with inline photos (same as remedial works page)
+    const recs = data.selectedRecommendations || [];
+    const recImages = data.recommendationImages || {};
+    if (recs.length > 0) {
+        if (y + 20 > PAGE_BOT) {
             pdf.addPage();
             addFooterToPage(pdf);
-            y = addPageHeader(pdf, 'INSPECTION SUMMARY (CONTINUED)', 'BS EN 62305 | Test & Inspection');
+            y = addPageHeader(pdf, 'INSPECTION SUMMARY (CONTINUED)', 'Test & Inspection');
         }
-        y = drawSectionHeader(pdf, 'RECOMMENDATIONS', MARGIN, y, PAGE_W - MARGIN * 2) + 3;
-        pdf.setFontSize(8.5);
-        pdf.setFont(undefined, 'normal');
-        const lines = pdf.splitTextToSize(generalComments, PAGE_W - MARGIN * 2);
-        pdf.text(lines, MARGIN, y);
-        y += lines.length * 4.5 + 6;
+        y = drawSectionHeader(pdf, 'RECOMMENDATIONS', MARGIN, y, PAGE_W - MARGIN * 2) + 5;
+
+        recs.forEach((rec, i) => {
+            const recLines = pdf.splitTextToSize(rec.text, PAGE_W - MARGIN * 2 - 12);
+            const photos   = recImages[rec.id] || [];
+            const textH    = recLines.length * 5.5 + 6;
+            const firstRowH = photos.length ? 44 : 0;
+            const minBlockH = textH + firstRowH;
+
+            if (y + minBlockH > PAGE_BOT) {
+                pdf.addPage();
+                addFooterToPage(pdf);
+                y = addPageHeader(pdf, 'INSPECTION SUMMARY (CONTINUED)', 'Test & Inspection');
+            }
+
+            // Numbered blue circle
+            pdf.setFillColor(...BLUE_ACCENT);
+            pdf.circle(MARGIN + 3.5, y - 1.5, 3.5, 'F');
+            pdf.setFontSize(8);
+            pdf.setFont(undefined, 'bold');
+            pdf.setTextColor(255, 255, 255);
+            pdf.text(String(i + 1), MARGIN + 3.5, y - 0.5, { align: 'center' });
+            pdf.setTextColor(0, 0, 0);
+
+            // Text
+            pdf.setFontSize(9.5);
+            pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(30, 30, 30);
+            recLines.forEach(line => {
+                if (y > PAGE_BOT - 8) {
+                    pdf.addPage();
+                    addFooterToPage(pdf);
+                    y = addPageHeader(pdf, 'INSPECTION SUMMARY (CONTINUED)', 'Test & Inspection');
+                }
+                pdf.text(line, MARGIN + 10, y);
+                y += 5.5;
+            });
+            y += 3;
+
+            // Inline photos
+            if (photos.length) {
+                const imgW = 55, imgH = 40, gap = 4, perRow = 3;
+                if (y + imgH > PAGE_BOT) {
+                    y = addPageHeader(pdf, 'INSPECTION SUMMARY (CONTINUED)', 'Test & Inspection');
+                }
+                let col = 0, rowY = y;
+                photos.forEach((imgData) => {
+                    if (col === perRow) { col = 0; y = rowY + imgH + gap; rowY = y; }
+                    if (col === 0 && rowY + imgH > PAGE_BOT) {
+                        pdf.addPage();
+                        addFooterToPage(pdf);
+                        y = addPageHeader(pdf, 'INSPECTION SUMMARY (CONTINUED)', 'Test & Inspection');
+                        rowY = y;
+                    }
+                    addImageToPDF(pdf, imgData, MARGIN + 10 + col * (imgW + gap), rowY, imgW, imgH, false);
+                    col++;
+                });
+                y = rowY + imgH + 6;
+            }
+            y += 5;
+        });
     }
 
     return y;
@@ -573,24 +632,29 @@ function buildEarthResistance(pdf, data) {
         // Overall resistance — plain text, reading in bold red/green
         if (overall > 0) {
             const pass = overall <= 10;
-            const readingStr = overall.toFixed(2);
+            const readingStr = overall.toFixed(2) + ' ohms' + (suffix ? '  ' + suffix : '');
+            const labelStr   = 'Overall System Resistance: ';
 
-            // "Overall System Resistance: " in normal black
-            pdf.setFontSize(11);
+            // Draw label + reading centred together as one line
+            pdf.setFontSize(13);
             pdf.setFont(undefined, 'normal');
             pdf.setTextColor(0, 0, 0);
-            const labelStr = 'Overall System Resistance: ';
-            const labelW = pdf.getTextWidth(labelStr);
-            const lineX = (PAGE_W - labelW - pdf.getStringUnitWidth(readingStr) * 11 / pdf.internal.scaleFactor) / 2;
-            pdf.text(labelStr, PAGE_W / 2, y + 6, { align: 'right' });
-
-            // Reading in bold red or green
+            const labelW2   = pdf.getTextWidth(labelStr);
             pdf.setFont(undefined, 'bold');
             pdf.setTextColor(...(pass ? [34, 139, 34] : [200, 40, 40]));
-            pdf.text(readingStr + ' ohms' + (suffix ? '  ' + suffix : ''), PAGE_W / 2, y + 6, { align: 'left' });
+            const readingW  = pdf.getTextWidth(readingStr);
+            const totalW    = labelW2 + readingW;
+            const startX    = (PAGE_W - totalW) / 2;
+
+            pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(labelStr, startX, y + 8);
+            pdf.setFont(undefined, 'bold');
+            pdf.setTextColor(...(pass ? [34, 139, 34] : [200, 40, 40]));
+            pdf.text(readingStr, startX + labelW2, y + 8);
 
             pdf.setTextColor(0, 0, 0);
-            y += 14;
+            y += 16;
         }
 
         // Earth table
@@ -617,8 +681,8 @@ function renderEarthTable(pdf, rows, y) {
     const tableWidth  = PAGE_W - MARGIN * 2;
     const colWidths   = [10, 18, 22, 18, 22, 22, 22, 36]; // sum = 170
     const headers     = ['E', 'Ohms', 'Test Clamp', 'Pit', 'Test Type', 'Ground', 'Earth Type', 'Comment'];
-    const rowH        = 8;
-    const headerH     = 10;
+    const rowH        = 9;
+    const headerH     = 11;
     const rowsPerPage = 25;
     let rowsOnPage    = 0;
     let tableStartY   = y;
@@ -626,12 +690,12 @@ function renderEarthTable(pdf, rows, y) {
     function drawHeader(yy) {
         pdf.setFillColor(...BLUE_ACCENT);
         pdf.rect(leftMargin, yy, tableWidth, headerH, 'F');
-        pdf.setFontSize(7.5);
+        pdf.setFontSize(8.5);
         pdf.setFont(undefined, 'bold');
         pdf.setTextColor(255, 255, 255);
         let cx = leftMargin;
         headers.forEach((h, i) => {
-            pdf.text(h, cx + colWidths[i] / 2, yy + 7, { align: 'center' });
+            pdf.text(h, cx + colWidths[i] / 2, yy + 7.5, { align: 'center' });
             cx += colWidths[i];
         });
         pdf.setTextColor(0, 0, 0);
@@ -683,12 +747,12 @@ function renderEarthTable(pdf, rows, y) {
             earth.comment || '-'
         ];
 
-        pdf.setFontSize(7.5);
+        pdf.setFontSize(8.5);
         pdf.setFont(undefined, 'normal');
         let cx = leftMargin;
         rowData.forEach((val, ci) => {
             const text = pdf.splitTextToSize(val, colWidths[ci] - 3);
-            pdf.text(text[0], cx + colWidths[ci] / 2, y + 5.5, { align: 'center' });
+            pdf.text(text[0], cx + colWidths[ci] / 2, y + 6.5, { align: 'center' });
             cx += colWidths[ci];
         });
 
@@ -757,8 +821,15 @@ async function generatePDF() {
     const siteStaffName      = document.getElementById('siteStaffName')?.value || '';
     const siteStaffSignature = window.siteStaffSignature?.signatureData || null;
     const standard           = document.getElementById('standard')?.value || '';
-    const generalComments    = document.getElementById('generalComments')?.value || '';
     const finalComments      = document.getElementById('finalComments')?.value || '';
+    // Recommendations — from catalogue picker (replaces generalComments textarea)
+    const selectedRecommendations = window.selectedRecommendations || [];
+    const recommendationImages = {};
+    selectedRecommendations.forEach(r => {
+        const imgs = (window.imageStore || {})['rec-' + r.id];
+        if (imgs) recommendationImages[r.id] = Array.isArray(imgs) ? imgs : [imgs];
+        else recommendationImages[r.id] = [];
+    });
     const structureHeight    = document.getElementById('structureHeight')?.value || '';
     const structurePerimeter = document.getElementById('structurePerimeter')?.value || '';
     const structureUse       = document.getElementById('structureUse')?.value || '';
@@ -782,7 +853,8 @@ async function generatePDF() {
 
     const summaryData = {
         selectedFailures: selectedFailuresList,
-        generalComments,
+        selectedRecommendations,
+        recommendationImages,
         standard
     };
 
