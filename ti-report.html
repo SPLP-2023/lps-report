@@ -681,6 +681,116 @@ function buildRecList() {
     if (!container) return;
     container.innerHTML = '';
 
+    // Inject shared repair/rec UI styles if not already present
+    if (!document.getElementById('rm-repair-styles')) {
+        const style = document.createElement('style');
+        style.id = 'rm-repair-styles';
+        style.textContent = `
+            .rm-repair-item {
+                display: flex;
+                gap: 12px;
+                align-items: flex-start;
+                padding: 12px 14px;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                margin-bottom: 8px;
+                background: #fff;
+                transition: border-color 0.2s, background 0.2s;
+            }
+            .rm-repair-item.rm-selected {
+                border-color: #0877c3;
+                background: #f0f7ff;
+            }
+            .rm-repair-check-col { padding-top: 2px; flex-shrink: 0; }
+            .rm-checkbox { width: 17px; height: 17px; cursor: pointer; accent-color: #0877c3; }
+            .rm-repair-body { flex: 1; }
+            .rm-repair-label {
+                font-size: 13.5px;
+                color: #1a1a1a;
+                cursor: pointer;
+                line-height: 1.45;
+                display: block;
+                margin: 0;
+                font-weight: normal;
+            }
+            .rm-inputs-row {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 8px;
+            }
+            .rm-input-label {
+                font-size: 12px;
+                font-weight: 600;
+                color: #555;
+                white-space: nowrap;
+            }
+            .rm-num-input {
+                width: 68px;
+                padding: 4px 8px;
+                border: 1px solid #adb5bd;
+                border-radius: 4px;
+                font-size: 13px;
+            }
+            .rm-text-input {
+                width: 100px;
+                padding: 4px 8px;
+                border: 1px solid #adb5bd;
+                border-radius: 4px;
+                font-size: 13px;
+            }
+            .rm-photo-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 8px;
+                flex-wrap: wrap;
+            }
+            .rm-photo-label { font-size: 12px; color: #555; font-weight: 600; }
+            .rm-photo-btn {
+                display: inline-block;
+                padding: 4px 12px;
+                background: #0877c3;
+                color: #fff;
+                border-radius: 5px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                border: none;
+                user-select: none;
+            }
+            .rm-photo-btn:hover { background: #065f99; }
+            .rm-photo-count { font-size: 12px; color: #27ae60; font-weight: 600; }
+            .rm-selected-tag {
+                background: #e8f4fd;
+                border: 1px solid #0877c3;
+                border-radius: 7px;
+                padding: 10px 14px;
+                margin-bottom: 8px;
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .rm-selected-tag .rm-tag-text { flex: 1; font-size: 13.5px; color: #0d1b2a; line-height: 1.45; }
+            .rm-selected-tag .rm-tag-photos { font-size: 11.5px; color: #0877c3; margin-top: 3px; }
+            .rm-tag-remove {
+                background: none; border: none;
+                color: #c0392b; font-size: 20px;
+                cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0;
+            }
+            .add-btn {
+                background: #0877c3; color: #fff;
+                border: none; border-radius: 6px;
+                padding: 8px 16px; font-size: 14px;
+                font-weight: 600; cursor: pointer;
+            }
+            .add-btn:hover { background: #065f99; }
+        `;
+        document.head.appendChild(style);
+    }
+
     RECOMMENDATIONS_CATALOGUE.forEach(rec => {
         const hasInputs = rec.hasQty || rec.hasEarth;
         const labelHtml = rec.template
