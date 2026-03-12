@@ -132,10 +132,21 @@
             <span class="section-right"><span class="status-dot" id="dot-sec-recommendations"></span><span class="chevron">▾</span></span>
         </button>
         <div class="section-body">
-        <div class="form-group">
-            <label for="generalComments">Additional Comments &amp; Recommendations:</label>
-            <textarea id="generalComments" rows="4" placeholder="Enter any additional observations, recommendations, or general comments..."></textarea>
-        </div>
+            <p style="font-style:italic;color:#6c757d;margin-bottom:14px;">Select any recommendations to pass on to the client. Where shown, enter the quantity or earth point reference. Photos can be attached to each recommendation.</p>
+            <div id="recListContainer"></div>
+            <div class="form-group" style="margin-top:18px;border-top:1px solid #dee2e6;padding-top:16px;">
+                <label style="font-weight:600;display:block;margin-bottom:8px;">Custom Recommendation / Free Text:</label>
+                <div style="display:flex;gap:10px;align-items:flex-start;">
+                    <textarea id="customRecText" rows="2" style="flex:1;" placeholder="Enter a recommendation not listed above..."></textarea>
+                    <button class="add-btn" onclick="addCustomRec()" style="margin-top:0;white-space:nowrap;">+ Add</button>
+                </div>
+            </div>
+            <div style="margin-top:18px;border-top:1px solid #dee2e6;padding-top:16px;">
+                <label style="font-weight:600;display:block;margin-bottom:8px;">✅ Selected Recommendations:</label>
+                <div id="selectedRecContainer">
+                    <p style="color:#888;font-style:italic;font-size:13px;">No recommendations selected yet.</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -539,7 +550,7 @@ const SECTION_FIELDS = {
     'sec-site':            ['siteName','siteAddress','testDate','engineerName','testKitRef','jobReference','siteStaffName'],
     'sec-standard':        ['standard'],
     'sec-selected':        [], // dynamic content — watch selectedFailures div
-    'sec-recommendations': ['generalComments'],
+    'sec-recommendations': [],
     'sec-structure':       ['structureHeight','structurePerimeter','structureUse','structureOccupancy','structureAge','previousInspections'],
     'sec-system':          ['earthArrangement','mainEquipotentialBond','surgeInstalled','surgeType','surgeSafe'],
     'sec-earth':           ['numEarths'],
@@ -609,9 +620,8 @@ function updateStatusDot(sectionId) {
             return el && el.querySelector('.failure-option.selected');
         });
     }
-    if (sectionId === 'sec-earth') {
-        const n = document.getElementById('numEarths');
-        filled = n && n.value && parseInt(n.value) > 0;
+    if (sectionId === 'sec-recommendations') {
+        filled = window.selectedRecommendations && window.selectedRecommendations.length > 0;
     }
 
     dot.classList.toggle('dot-filled', filled);
@@ -641,5 +651,208 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreSectionStates();
     initSectionWatchers();
     updateAllDots();
+    buildRecList();
 });
+</script>
+
+<script>
+// ===================== RECOMMENDATIONS CATALOGUE =====================
+const RECOMMENDATIONS_CATALOGUE = [
+    { id: 'rc01', template: 'It is recommended to install additional clips to secure roof conductors back to the structure.', hasQty: false, hasEarth: false },
+    { id: 'rc02', template: 'It is recommended to install additional clips to secure the down conductors.', hasQty: false, hasEarth: false },
+    { id: 'rc03', template: 'It is recommended to install {X} bonds to plant items to prevent flashover from occurring.', hasQty: true, qtyLabel: 'No. of bonds' },
+    { id: 'rc04', template: 'It is recommended to install {X} new A-clamps.', hasQty: true, qtyLabel: 'No. of clamps' },
+    { id: 'rc05', template: 'It is recommended to install {X} new Stainless Steel test clamps.', hasQty: true, qtyLabel: 'No. of clamps' },
+    { id: 'rc06', template: 'It is recommended to install additional earthing materials to {E#} to reduce the earth resistance reading.', hasEarth: true, earthLabel: 'Earth ref' },
+    { id: 'rc07', template: 'It is recommended to install new clamps to replace corroded clamps.', hasQty: false, hasEarth: false },
+    { id: 'rc08', template: 'It is recommended to install new clamps to replace broken clamps.', hasQty: false, hasEarth: false },
+    { id: 'rc09', template: 'It is recommended to install a new ESEAT lightning protection system, certified to NF C 17-102.', hasQty: false, hasEarth: false },
+    { id: 'rc10', template: 'It is recommended to excavate {E#} to locate the earth and test the resistance.', hasEarth: true, earthLabel: 'Earth ref' },
+    { id: 'rc11', template: 'It is recommended to investigate the continuity fault at {E#} — fault to be located and repaired.', hasEarth: true, earthLabel: 'Earth ref' },
+    { id: 'rc12', template: 'It is recommended to investigate the continuity fault at {E#} — fault located, further works required.', hasEarth: true, earthLabel: 'Earth ref' },
+    { id: 'rc13', template: 'It is recommended to install finial rods to provide an angle of protection over the roof areas.', hasQty: false, hasEarth: false },
+];
+
+window.selectedRecommendations = [];
+window.imageStore = window.imageStore || {};
+
+function buildRecList() {
+    const container = document.getElementById('recListContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    RECOMMENDATIONS_CATALOGUE.forEach(rec => {
+        const hasInputs = rec.hasQty || rec.hasEarth;
+        const labelHtml = rec.template
+            .replace('{X}',  '<em style="color:#0877c3;font-style:normal;font-weight:700;">[qty]</em>')
+            .replace('{E#}', '<em style="color:#0877c3;font-style:normal;font-weight:700;">[ref]</em>');
+
+        let inputsHtml = '';
+        if (rec.hasQty) {
+            inputsHtml += `<label class="rm-input-label">${rec.qtyLabel || 'Quantity'}:</label>
+                <input type="number" min="1" max="999" value="1" id="recqty-${rec.id}" class="rm-num-input"
+                    oninput="refreshSelectedRec('${rec.id}')" onclick="event.stopPropagation()">`;
+        }
+        if (rec.hasEarth) {
+            inputsHtml += `<label class="rm-input-label">${rec.earthLabel || 'Earth ref'}:</label>
+                <input type="text" placeholder="e.g. E1" id="recearth-${rec.id}" class="rm-text-input"
+                    oninput="refreshSelectedRec('${rec.id}')" onclick="event.stopPropagation()">`;
+        }
+
+        const photoHtml = `
+            <div class="rm-photo-row" id="rec-photo-row-${rec.id}" style="display:none;">
+                <span class="rm-photo-label">📷 Photos:</span>
+                <label class="rm-photo-btn" for="rec-img-${rec.id}">
+                    Add photos
+                    <input type="file" id="rec-img-${rec.id}" accept="image/*" multiple style="display:none;"
+                        onchange="handleRecImages(this, '${rec.id}')">
+                </label>
+                <span id="rec-img-preview-${rec.id}" class="rm-photo-count"></span>
+            </div>`;
+
+        const item = document.createElement('div');
+        item.className = 'rm-repair-item';
+        item.id = 'rec-item-' + rec.id;
+        item.innerHTML = `
+            <div class="rm-repair-check-col">
+                <input type="checkbox" id="recchk-${rec.id}" class="rm-checkbox"
+                    onchange="toggleRec('${rec.id}')">
+            </div>
+            <div class="rm-repair-body">
+                <label for="recchk-${rec.id}" class="rm-repair-label">${labelHtml}</label>
+                ${hasInputs ? `<div class="rm-inputs-row" id="rec-inputs-row-${rec.id}" style="display:none;">${inputsHtml}</div>` : ''}
+                ${photoHtml}
+            </div>`;
+        container.appendChild(item);
+    });
+}
+
+function resolveRecText(rec) {
+    let text = rec.template;
+    if (rec.hasQty) {
+        const el = document.getElementById('recqty-' + rec.id);
+        text = text.replace('{X}', (el && el.value) ? el.value.trim() : '?');
+    }
+    if (rec.hasEarth) {
+        const el = document.getElementById('recearth-' + rec.id);
+        text = text.replace('{E#}', (el && el.value) ? el.value.trim() : '?');
+    }
+    return text;
+}
+
+function toggleRec(id) {
+    const chk       = document.getElementById('recchk-'      + id);
+    const item      = document.getElementById('rec-item-'    + id);
+    const inputsRow = document.getElementById('rec-inputs-row-' + id);
+    const photoRow  = document.getElementById('rec-photo-row-'  + id);
+    const rec       = RECOMMENDATIONS_CATALOGUE.find(r => r.id === id);
+    if (!rec) return;
+
+    if (chk.checked) {
+        item.classList.add('rm-selected');
+        if (inputsRow) inputsRow.style.display = 'flex';
+        if (photoRow)  photoRow.style.display  = 'flex';
+        window.selectedRecommendations.push({ id, text: resolveRecText(rec), custom: false });
+    } else {
+        item.classList.remove('rm-selected');
+        if (inputsRow) inputsRow.style.display = 'none';
+        if (photoRow)  photoRow.style.display  = 'none';
+        window.selectedRecommendations = window.selectedRecommendations.filter(r => r.id !== id);
+        delete window.imageStore['rec-' + id];
+        const prev = document.getElementById('rec-img-preview-' + id);
+        if (prev) prev.textContent = '';
+    }
+    renderSelectedRecs();
+    updateAllDots();
+}
+
+function refreshSelectedRec(id) {
+    const existing = window.selectedRecommendations.find(r => r.id === id);
+    if (!existing) return;
+    const rec = RECOMMENDATIONS_CATALOGUE.find(r => r.id === id);
+    if (!rec) return;
+    existing.text = resolveRecText(rec);
+    renderSelectedRecs();
+}
+
+function addCustomRec() {
+    const ta = document.getElementById('customRecText');
+    const text = (ta.value || '').trim();
+    if (!text) { ta.focus(); return; }
+    const id = 'custom-' + Date.now();
+    window.selectedRecommendations.push({ id, text, custom: true });
+    ta.value = '';
+    renderSelectedRecs();
+    updateAllDots();
+}
+
+function removeSelectedRec(id) {
+    window.selectedRecommendations = window.selectedRecommendations.filter(r => r.id !== id);
+    const chk = document.getElementById('recchk-' + id);
+    if (chk) {
+        chk.checked = false;
+        document.getElementById('rec-item-' + id)?.classList.remove('rm-selected');
+        const inputsRow = document.getElementById('rec-inputs-row-' + id);
+        const photoRow  = document.getElementById('rec-photo-row-'  + id);
+        if (inputsRow) inputsRow.style.display = 'none';
+        if (photoRow)  photoRow.style.display  = 'none';
+    }
+    delete window.imageStore['rec-' + id];
+    renderSelectedRecs();
+    updateAllDots();
+}
+
+function renderSelectedRecs() {
+    const container = document.getElementById('selectedRecContainer');
+    if (!container) return;
+    if (!window.selectedRecommendations.length) {
+        container.innerHTML = '<p style="color:#888;font-style:italic;font-size:13px;">No recommendations selected yet.</p>';
+        return;
+    }
+    container.innerHTML = window.selectedRecommendations.map((r, i) => {
+        const imgs = window.imageStore['rec-' + r.id];
+        const imgCount = Array.isArray(imgs) ? imgs.length : (imgs ? 1 : 0);
+        const photoNote = imgCount > 0 ? `<div class="rm-tag-photos">📷 ${imgCount} photo${imgCount > 1 ? 's' : ''} attached</div>` : '';
+        const uploadRow = r.custom ? `
+            <div class="rm-photo-row" style="margin-top:8px;">
+                <span class="rm-photo-label">📷 Photos:</span>
+                <label class="rm-photo-btn" for="rec-custom-img-${r.id}">
+                    Add photos
+                    <input type="file" id="rec-custom-img-${r.id}" accept="image/*" multiple style="display:none;"
+                        onchange="handleRecImages(this, '${r.id}')">
+                </label>
+                <span id="rec-img-preview-${r.id}" class="rm-photo-count">${imgCount > 0 ? '✓ ' + imgCount + ' photo(s)' : ''}</span>
+            </div>` : '';
+        return `
+            <div class="rm-selected-tag">
+                <div class="rm-tag-text">
+                    <strong>${i + 1}.</strong> ${r.text}
+                    ${photoNote}${uploadRow}
+                </div>
+                <button class="rm-tag-remove" onclick="removeSelectedRec('${r.id}')" title="Remove">×</button>
+            </div>`;
+    }).join('');
+}
+
+function handleRecImages(input, recId) {
+    if (!input.files.length) return;
+    const files = Array.from(input.files);
+    const previewEl = document.getElementById('rec-img-preview-' + recId);
+    if (previewEl) previewEl.textContent = 'Processing...';
+    Promise.all(files.map(f => {
+        return new Promise(res => {
+            const reader = new FileReader();
+            reader.onload = e => res(e.target.result);
+            reader.readAsDataURL(f);
+        });
+    })).then(results => {
+        const storeKey = 'rec-' + recId;
+        const existing = window.imageStore[storeKey] || [];
+        window.imageStore[storeKey] = existing.concat(results);
+        const total = window.imageStore[storeKey].length;
+        if (previewEl) previewEl.textContent = '✓ ' + total + ' photo(s)';
+        renderSelectedRecs();
+        updateAllDots();
+    });
+}
 </script>
