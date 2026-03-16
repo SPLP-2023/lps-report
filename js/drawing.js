@@ -1271,3 +1271,51 @@ function fitCanvas() {
 
 fitCanvas();
 window.addEventListener('resize', fitCanvas);
+
+// ── Restore drawing state if returning from report ──────
+(function restoreStateIfNeeded() {
+    const urlParams  = new URLSearchParams(window.location.search);
+    const reportMode = urlParams.get('report');
+    if (!reportMode) return;
+
+    const stateKey = 'striker-drawing-' + reportMode + '-state';
+    const raw = localStorage.getItem(stateKey);
+    if (!raw) return;
+
+    try {
+        const state = JSON.parse(raw);
+
+        // Restore drawing elements
+        if (Array.isArray(state.elements)) {
+            elements.length = 0;
+            state.elements.forEach(el => elements.push(el));
+        }
+
+        // Restore counters
+        if (typeof state.earthCounter   === 'number') earthCounter   = state.earthCounter;
+        if (typeof state.mdbCounter     === 'number') mdbCounter     = state.mdbCounter;
+        if (typeof state.bondCounter    === 'number') bondCounter    = state.bondCounter;
+        if (typeof state.entrancePlaced === 'boolean') entrancePlaced = state.entrancePlaced;
+        if (state.colourLegend && typeof state.colourLegend === 'object') {
+            Object.assign(colourLegend, state.colourLegend);
+        }
+
+        // Restore info panel fields
+        if (state.siteName && document.getElementById('infoSiteName'))
+            document.getElementById('infoSiteName').value = state.siteName;
+        if (state.address && document.getElementById('infoAddress'))
+            document.getElementById('infoAddress').value = state.address;
+        if (state.drawnBy && document.getElementById('infoDrawnBy'))
+            document.getElementById('infoDrawnBy').value = state.drawnBy;
+        if (state.date && document.getElementById('infoDate'))
+            document.getElementById('infoDate').value = state.date;
+
+        // Re-render
+        recountSymbols();
+        redrawMain();
+        updateLegend();
+
+    } catch(e) {
+        console.warn('Could not restore drawing state:', e);
+    }
+})();
