@@ -906,6 +906,20 @@ async function generatePDF() {
     // --- Filename: Lightning Protection T&I Report - [SiteName] [dd-mm-yy].pdf ---
     const datePart = formatDateShort(testDate);
     const namePart = (siteName || jobReference || 'Report').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
+    // ── Append site drawing if saved ──────────────────────
+    const tiDrawing = localStorage.getItem('striker-drawing-ti');
+    if (tiDrawing) {
+        const savedState = JSON.parse(localStorage.getItem('striker-drawing-ti-state') || '{}');
+        const drawingMeta = {
+            siteName: siteName    || '',
+            address:  siteAddress || '',
+            date:     testDate    || '',
+            legend:   savedState.legend || []
+        };
+        await buildDrawingPage(pdf, tiDrawing, drawingMeta, true);
+    }
+    // ─────────────────────────────────────────────────────
+
     const filename = `Lightning Protection T&I Report - ${namePart} ${datePart}.pdf`;
 
     pdf.save(filename);
