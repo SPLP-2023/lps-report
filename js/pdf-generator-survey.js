@@ -426,7 +426,7 @@ function svBuildNextSteps(pdf) {
 
 // ===================== MAIN ENTRY POINT =====================
 
-function generateSurveyPDF() {
+async function generateSurveyPDF() {
     const siteName       = document.getElementById('siteName')?.value || '';
     const jobReference   = document.getElementById('jobReference')?.value || '';
     const siteAddress    = document.getElementById('siteAddress')?.value || '';
