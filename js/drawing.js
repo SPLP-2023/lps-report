@@ -62,9 +62,10 @@ let undoStack = [];      // for redo
 let selectedIndex = -1;  // index of selected element
 
 // Counters
-let earthCounter = 0;    // next earth number
-let mdbCounter   = 0;
-let bondCounter  = 0;
+let earthCounter    = 0;
+let mdbCounter      = 0;
+let bondCounter     = 0;
+let entrancePlaced  = false;  // only one entrance allowed
 
 // Custom colour legend tracking
 let colourLegend = {}; // colour -> label string
@@ -289,7 +290,7 @@ function setTool(tool) {
     const cursorMap = {
         freehand: 'crosshair', line: 'crosshair', rect: 'crosshair',
         circle: 'crosshair', triangle: 'crosshair', earth: 'copy',
-        mdb: 'copy', bond: 'copy', select: 'default', eraser: 'cell'
+        mdb: 'copy', bond: 'copy', entrance: 'copy', select: 'default', eraser: 'cell'
     };
     previewCanvas.style.cursor = cursorMap[tool] || 'crosshair';
 }
@@ -474,7 +475,7 @@ function onPointerDown(e) {
     // Normal drawing tools (always work when bg is locked)
     if (currentTool === 'select') { handleSelect(pos.x, pos.y); return; }
     if (currentTool === 'eraser') { handleErase(pos.x, pos.y);  return; }
-    if (['earth', 'mdb', 'bond'].includes(currentTool)) { placeSymbol(pos.x, pos.y); return; }
+    if (['earth', 'mdb', 'bond', 'entrance'].includes(currentTool)) { placeSymbol(pos.x, pos.y); return; }
 
     isDrawing = true;
     startX = pos.x;
@@ -602,12 +603,7 @@ function placeSymbol(x, y) {
     if (currentTool === 'earth') {
         earthCounter++;
         const label = 'E' + earthCounter;
-        commitElement({
-            type: 'earth',
-            x, y,
-            eq: earthType === 'eq',
-            label
-        });
+        commitElement({ type: 'earth', x, y, eq: earthType === 'eq', label });
         document.getElementById('nextEarthLabel').textContent = 'E' + (earthCounter + 1);
         document.getElementById('earthCountDisplay').textContent = earthCounter;
     } else if (currentTool === 'mdb') {
@@ -616,6 +612,18 @@ function placeSymbol(x, y) {
     } else if (currentTool === 'bond') {
         bondCounter++;
         commitElement({ type: 'bond', x, y, label: 'B' + bondCounter });
+    } else if (currentTool === 'entrance') {
+        if (entrancePlaced) {
+            alert('Only one entrance can be placed per drawing. Delete the existing entrance to move it.');
+            return;
+        }
+        entrancePlaced = true;
+        commitElement({ type: 'entrance', x, y, label: 'ENT' });
+        // Disable the button to signal it's been used
+        const btn = document.getElementById('tool-entrance');
+        if (btn) btn.classList.add('tool-used');
+        const mobBtn = document.getElementById('mob-entrance');
+        if (mobBtn) mobBtn.classList.add('tool-used');
     }
     undoStack = [];
     updateLegend();
@@ -697,6 +705,10 @@ function drawElement(ctx, el, selected) {
         }
         case 'bond': {
             drawBondSymbol(ctx, el.x, el.y, el.label);
+            break;
+        }
+        case 'entrance': {
+            drawEntranceSymbol(ctx, el.x, el.y);
             break;
         }
     }
@@ -786,6 +798,29 @@ function drawBondSymbol(ctx, x, y, label) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(label, x, y - r - 6);
+}
+
+function drawEntranceSymbol(ctx, x, y) {
+    ctx.setLineDash([]);
+    const w = 46, h = 32;
+    // Square border — blue to stand out
+    ctx.strokeStyle = '#0877c3';
+    ctx.lineWidth   = 2.5;
+    ctx.strokeRect(x - w / 2, y - h / 2, w, h);
+    // Light blue fill
+    ctx.fillStyle = 'rgba(8,119,195,0.10)';
+    ctx.fillRect(x - w / 2 + 1, y - h / 2 + 1, w - 2, h - 2);
+    // Bold "E" centred
+    ctx.fillStyle   = '#0877c3';
+    ctx.font        = 'bold 20px Arial';
+    ctx.textAlign   = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('E', x, y);
+    // "ENT" label above
+    ctx.fillStyle    = '#0877c3';
+    ctx.font         = 'bold 14px Arial';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('ENT', x, y - h / 2 - 6);
 }
 
 // ── Redraw main canvas ─────────────────────────────────
@@ -887,8 +922,8 @@ function elementHit(el, x, y) {
         const rx = Math.abs(el.w) / 2 + tol, ry = Math.abs(el.h) / 2 + tol;
         return ((x - cx) ** 2 / rx ** 2) + ((y - cy) ** 2 / ry ** 2) <= 1;
     }
-    if (['earth','mdb','bond'].includes(el.type)) {
-        return Math.hypot(el.x - x, el.y - y) < 28;
+    if (['earth','mdb','bond','entrance'].includes(el.type)) {
+        return Math.hypot(el.x - x, el.y - y) < 32;
     }
     return false;
 }
@@ -953,11 +988,17 @@ function redo() {
 }
 
 function recountSymbols() {
-    earthCounter = elements.filter(e => e.type === 'earth').length;
-    mdbCounter   = elements.filter(e => e.type === 'mdb').length;
-    bondCounter  = elements.filter(e => e.type === 'bond').length;
+    earthCounter   = elements.filter(e => e.type === 'earth').length;
+    mdbCounter     = elements.filter(e => e.type === 'mdb').length;
+    bondCounter    = elements.filter(e => e.type === 'bond').length;
+    entrancePlaced = elements.some(e => e.type === 'entrance');
     document.getElementById('nextEarthLabel').textContent = 'E' + (earthCounter + 1);
     document.getElementById('earthCountDisplay').textContent = earthCounter;
+    // Reflect entrance availability in button state
+    const btn    = document.getElementById('tool-entrance');
+    const mobBtn = document.getElementById('mob-entrance');
+    if (btn)    btn.classList.toggle('tool-used', entrancePlaced);
+    if (mobBtn) mobBtn.classList.toggle('tool-used', entrancePlaced);
 }
 
 function clearCanvas() {
@@ -1004,14 +1045,16 @@ function updateLegend() {
     const hasDashed = elements.some(e => (e.type === 'freehand' || e.type === 'line') && e.dashed);
     const hasMDB    = elements.some(e => e.type === 'mdb');
     const hasBond   = elements.some(e => e.type === 'bond');
+    const hasEntrance = elements.some(e => e.type === 'entrance');
 
     let html = '';
-    if (hasEarth)  html += legendRow('symbol', null,      'earth-std', 'Standard Earth (E)');
-    if (hasEQ)     html += legendRow('symbol', null,      'earth-eq',  'EQ / Protective Earth');
-    if (hasBlack)  html += legendRow('line',   '#222222', false,       'Building / Structure');
-    if (hasDashed) html += legendRow('line',   '#e74c3c', true,        'Conductor');
-    if (hasMDB)    html += legendRow('symbol', null,      'mdb',       'MDB – Main Distribution Board');
-    if (hasBond)   html += legendRow('symbol', null,      'bond',      'Bond Point');
+    if (hasEarth)    html += legendRow('symbol', null,      'earth-std', 'Standard Earth (E)');
+    if (hasEQ)       html += legendRow('symbol', null,      'earth-eq',  'EQ / Protective Earth');
+    if (hasBlack)    html += legendRow('line',   '#222222', false,       'Building / Structure');
+    if (hasDashed)   html += legendRow('line',   '#e74c3c', true,        'Conductor');
+    if (hasMDB)      html += legendRow('symbol', null,      'mdb',       'MDB – Main Distribution Board');
+    if (hasBond)     html += legendRow('symbol', null,      'bond',      'Bond Point');
+    if (hasEntrance) html += legendRow('symbol', null,      'entrance',  'Entrance');
 
     // Collect all non-black, non-dashed colours used on canvas
     const usedCustomColours = [...new Set(
@@ -1103,6 +1146,17 @@ function legendRow(kind, colour, special, label) {
             <span class="legend-label">${label}</span>
         </div>`;
     }
+    if (special === 'entrance') {
+        return `<div class="legend-item">
+            <div class="legend-swatch">
+                <svg width="22" height="18" viewBox="0 0 22 18">
+                    <rect x="1" y="1" width="20" height="16" rx="1" fill="rgba(8,119,195,0.12)" stroke="#0877c3" stroke-width="1.8"/>
+                    <text x="11" y="13" text-anchor="middle" font-size="11" font-weight="bold" fill="#0877c3">E</text>
+                </svg>
+            </div>
+            <span class="legend-label">${label}</span>
+        </div>`;
+    }
     return '';
 }
 
@@ -1150,16 +1204,18 @@ function buildLegendData() {
     const hasBlack  = elements.some(e =>
         (e.type === 'freehand'||e.type==='line'||['rect','circle','triangle'].includes(e.type))
         && !e.dashed && (e.colour === '#222222' || !e.colour));
-    const hasDashed = elements.some(e => (e.type === 'freehand'||e.type==='line') && e.dashed);
-    const hasMDB    = elements.some(e => e.type === 'mdb');
-    const hasBond   = elements.some(e => e.type === 'bond');
+    const hasDashed   = elements.some(e => (e.type === 'freehand'||e.type==='line') && e.dashed);
+    const hasMDB      = elements.some(e => e.type === 'mdb');
+    const hasBond     = elements.some(e => e.type === 'bond');
+    const hasEntrance = elements.some(e => e.type === 'entrance');
 
-    if (hasEarth)  items.push({ kind:'earth-std',  label:'Standard Earth (E)' });
-    if (hasEQ)     items.push({ kind:'earth-eq',   label:'EQ / Protective Earth' });
-    if (hasBlack)  items.push({ kind:'line', colour:'#222222', dashed:false, label:'Building / Structure' });
-    if (hasDashed) items.push({ kind:'line', colour:'#e74c3c', dashed:true,  label:'Conductor' });
-    if (hasMDB)    items.push({ kind:'mdb',  label:'MDB – Main Distribution Board' });
-    if (hasBond)   items.push({ kind:'bond', label:'Bond Point' });
+    if (hasEarth)    items.push({ kind:'earth-std',  label:'Standard Earth (E)' });
+    if (hasEQ)       items.push({ kind:'earth-eq',   label:'EQ / Protective Earth' });
+    if (hasBlack)    items.push({ kind:'line', colour:'#222222', dashed:false, label:'Building / Structure' });
+    if (hasDashed)   items.push({ kind:'line', colour:'#e74c3c', dashed:true,  label:'Conductor' });
+    if (hasMDB)      items.push({ kind:'mdb',      label:'MDB – Main Distribution Board' });
+    if (hasBond)     items.push({ kind:'bond',     label:'Bond Point' });
+    if (hasEntrance) items.push({ kind:'entrance', label:'Entrance' });
 
     // Custom colours — all non-black non-dashed colours
     const customC = [...new Set(
