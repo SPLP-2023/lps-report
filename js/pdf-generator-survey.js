@@ -480,29 +480,20 @@ function generateSurveyPDF() {
     const photos = Array.isArray(d.surveyPhotos) ? d.surveyPhotos : (d.surveyPhotos ? [d.surveyPhotos] : []);
     if (photos.length) svBuildPhotos(pdf, photos);
     svBuildNextSteps(pdf);
-
-    // ── Append site drawing if saved ──────────────────────
-    const surveyDrawing = localStorage.getItem('striker-drawing-survey');
-    if (surveyDrawing) {
-        try {
-            pdf.addPage([420, 297], 'landscape');
-            const PW = 420, PH = 297, M = 8;
-            pdf.setDrawColor(30, 30, 30);
-            pdf.setLineWidth(0.4);
-            pdf.rect(M, M, PW - M * 2, PH - M * 2);
-            const cW = 1400, cH = 900;
-            const areaW = PW - M * 2, areaH = PH - M * 2;
-            const fit  = Math.min(areaW / cW, areaH / cH);
-            const fitW = cW * fit, fitH = cH * fit;
-            const offX = M + (areaW - fitW) / 2;
-            const offY = M + (areaH - fitH) / 2;
-            pdf.addImage(surveyDrawing, 'JPEG', offX, offY, fitW, fitH);
-        } catch(e) {
-            console.error('Drawing append failed:', e);
+    
+        // ── Append site drawing if saved ──────────────────────
+        const surveyDrawing = localStorage.getItem('striker-drawing-survey');
+        if (surveyDrawing) {
+            const drawingMeta = {
+                siteName: siteName || '',
+                address:  surveyData.siteAddress || '',
+                date:     surveyDate || '',
+                legend:   []
+            };
+            await buildDrawingPage(pdf, surveyDrawing, drawingMeta, true);
         }
+        // ─────────────────────────────────────────────────────
+    
+        const namePart = (siteName || jobReference || 'Survey').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
+        pdf.save(`Lightning Protection Survey Report - ${namePart} ${svFormatDateShort(surveyDate)}.pdf`);
     }
-    // ─────────────────────────────────────────────────────
-
-    const namePart = (siteName || jobReference || 'Survey').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
-    pdf.save(`Lightning Protection Survey Report - ${namePart} ${svFormatDateShort(surveyDate)}.pdf`);
-}
