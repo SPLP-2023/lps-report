@@ -1149,9 +1149,9 @@ function legendRow(kind, colour, special, label) {
     if (special === 'entrance') {
         return `<div class="legend-item">
             <div class="legend-swatch">
-                <svg width="22" height="18" viewBox="0 0 22 18">
-                    <rect x="1" y="1" width="20" height="16" rx="1" fill="rgba(8,119,195,0.12)" stroke="#0877c3" stroke-width="1.8"/>
-                    <text x="11" y="13" text-anchor="middle" font-size="11" font-weight="bold" fill="#0877c3">E</text>
+                <svg width="28" height="18" viewBox="0 0 28 18">
+                    <rect x="1" y="1" width="26" height="16" fill="rgba(8,119,195,0.10)" stroke="#0877c3" stroke-width="1.8"/>
+                    <text x="14" y="13" text-anchor="middle" font-size="11" font-weight="bold" fill="#0877c3">E</text>
                 </svg>
             </div>
             <span class="legend-label">${label}</span>
