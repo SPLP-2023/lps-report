@@ -112,7 +112,20 @@ async function exportDrawingPDF() {
         }
 
         curY = infoBlock('Site Name',    siteName, curY, 11, 22);
-        curY = infoBlock('Site Address', address,  curY, 10, 34);
+
+        // ── Date — own box directly under Site Name ───
+        hRule(curY);
+        pdf.setFontSize(7.5);
+        pdf.setFont('helvetica','bold');
+        pdf.setTextColor(90,90,90);
+        pdf.text('DATE', TB_X + 3, curY + 6);
+        pdf.setFont('helvetica','normal');
+        pdf.setFontSize(10);
+        pdf.setTextColor(15,15,15);
+        pdf.text(date, TB_X + 3, curY + 14);
+        curY += 20;
+
+        curY = infoBlock('Site Address', address, curY, 10, 34);
 
         // ── Legend ────────────────────────────────────
         hRule(curY);
@@ -206,45 +219,37 @@ async function exportDrawingPDF() {
                     if (ly + i * 4.5 < legendBottom) pdf.text(ln, LABEL_X, ly + i * 4.5);
                 });
                 ly += Math.max(ROW_H, lines.length * 4.5 + 3);
+
+            } else if (item.kind === 'entrance') {
+                // Draw E-in-square symbol
+                const ex = SWATCH_X + 7;
+                pdf.setDrawColor(8,119,195);
+                pdf.setFillColor(8,119,195,0.12);
+                pdf.setLineWidth(0.8);
+                pdf.setLineDash([]);
+                pdf.rect(SWATCH_X, ly - 7, 14, 10, 'S');
+                pdf.setFontSize(8);
+                pdf.setFont('helvetica','bold');
+                pdf.setTextColor(8,119,195);
+                pdf.text('E', ex, ly - 1, { align: 'center' });
+                pdf.setFontSize(8.5);
+                pdf.setFont('helvetica','normal');
+                pdf.setTextColor(15,15,15);
+                const lines = pdf.splitTextToSize(item.label, LABEL_W);
+                lines.forEach((ln, i) => {
+                    if (ly + i * 4.5 < legendBottom) pdf.text(ln, LABEL_X, ly + i * 4.5);
+                });
+                ly += Math.max(ROW_H, lines.length * 4.5 + 3);
             }
         });
 
-        // ── Scale ─────────────────────────────────────
-        const scaleY = PH - MARGIN - 32;
-        hRule(scaleY);
-        pdf.setFontSize(7.5);
-        pdf.setFont('helvetica','bold');
-        pdf.setTextColor(90,90,90);
-        pdf.text('SCALE', TB_X + 3, scaleY + 6);
-        pdf.setFontSize(9.5);
-        pdf.setFont('helvetica','normal');
-        pdf.setTextColor(15,15,15);
-        // Centred within the title block
-        pdf.text(scale, TB_X + TB_W / 2, scaleY + 13.5, { align: 'center' });
-
-        // ── Drawn By / Date ───────────────────────────
-        const bottomY = PH - MARGIN - 18;
-        hRule(bottomY);
-        const midX = TB_X + TB_W / 2;
-        pdf.setDrawColor(160,160,160);
-        pdf.setLineWidth(0.25);
-        pdf.line(midX, bottomY, midX, PH - MARGIN);
-
-        pdf.setFontSize(7.5);
-        pdf.setFont('helvetica','bold');
-        pdf.setTextColor(90,90,90);
-        pdf.text('DRAWN BY', TB_X + 3, bottomY + 6);
-        pdf.text('DATE',     midX + 3,  bottomY + 6);
-
-        pdf.setFontSize(11);
-        pdf.setFont('helvetica','bold');
-        pdf.setTextColor(15,15,15);
-        pdf.text(drawnBy.toUpperCase(), TB_X + 3, bottomY + 14);
-        pdf.text(date,                  midX + 3,  bottomY + 14);
-
+        // ── Close bottom border only ───────────────────
         hRule(PH - MARGIN);
 
-        const fileName = (siteName || 'site-drawing').replace(/[^a-z0-9]/gi,'-').toLowerCase() + '-drawing.pdf';
+        // ── Filename: LP Drawing - [SiteName] [dd-mm-yy] ─
+        const fileDate = formatFilenameDate(meta.date);
+        const cleanName = (siteName || 'Site').replace(/[^a-z0-9 ]/gi, '').trim();
+        const fileName = `LP Drawing - ${cleanName} [${fileDate}].pdf`;
         pdf.save(fileName);
 
     } catch(err) {
@@ -284,7 +289,16 @@ async function fetchLogoBase64WithSize() {
     });
 }
 
+// PDF display date: dd/mm/yy
 function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    if (!y || !m || !d) return dateStr;
+    return `${d}/${m}/${y.slice(2)}`;
+}
+
+// Filename date: dd-mm-yy
+function formatFilenameDate(dateStr) {
     if (!dateStr) return '';
     const [y, m, d] = dateStr.split('-');
     if (!y || !m || !d) return dateStr;
