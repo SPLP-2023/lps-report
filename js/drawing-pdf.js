@@ -311,3 +311,40 @@ function hexToRgb(hex) {
     if (h.length !== 6) return {r:0,g:0,b:0};
     return { r:parseInt(h.slice(0,2),16), g:parseInt(h.slice(2,4),16), b:parseInt(h.slice(4,6),16) };
 }
+
+// ── Save drawing to report via localStorage ─────────────
+function saveDrawingToReport() {
+    const btn = document.getElementById('btnSaveToReport');
+    btn.textContent = '⏳ Saving...';
+    btn.disabled = true;
+
+    try {
+        const urlParams  = new URLSearchParams(window.location.search);
+        const reportMode = urlParams.get('report');
+        if (!reportMode) throw new Error('No report mode specified');
+
+        const drawingCanvas = window.getDrawingCanvas ? window.getDrawingCanvas() : null;
+        if (!drawingCanvas) throw new Error('No canvas found');
+
+        // Save as JPEG base64 — kept at reasonable quality to avoid localStorage limits
+        const imgData = drawingCanvas.toDataURL('image/jpeg', 0.85);
+
+        const storageKey = 'striker-drawing-' + reportMode;
+        localStorage.setItem(storageKey, imgData);
+
+        // Navigate back to the report
+        const REPORT_URLS = {
+            survey:   'survey.html',
+            ti:       't&i-report.html',
+            remedial: 'remedial-report.html'
+        };
+        const returnUrl = REPORT_URLS[reportMode] || 'reports.html';
+        window.location.href = returnUrl;
+
+    } catch (err) {
+        console.error('Save to report failed:', err);
+        alert('Failed to save drawing: ' + err.message);
+        btn.textContent = '💾 Save to Report';
+        btn.disabled = false;
+    }
+}
