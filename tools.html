@@ -14,21 +14,28 @@
 <div class="container">
     <div class="nav-header">
         <button class="nav-button back-button" onclick="location.href='index.html'">← Home</button>
-        <span class="page-title">Tools</span>
         <button class="nav-button" onclick="location.href='reports.html'">Reports</button>
     </div>
     <h1>Tools</h1>
-    <div class="report-cards">
-        <div class="report-card coming-soon">
-            <div class="report-card-icon">📏</div>
-            <div class="report-card-title">Separation Distance</div>
-            <div class="report-card-desc coming-soon-label">Coming soon</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;margin-top:20px;">
+
+        <!-- Site Drawing — Available -->
+        <div onclick="location.href='drawing.html'"
+             style="background:white;border:2px solid #0877c3;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;box-shadow:0 2px 8px rgba(8,119,195,0.1);"
+             onmouseover="this.style.transform='translateY(-3px)';this.style.background='#f0f8ff'"
+             onmouseout="this.style.transform='';this.style.background='white'">
+            <div style="font-size:2.2em;margin-bottom:10px;">🖊️</div>
+            <div style="font-size:1.1em;font-weight:700;color:#0d1b2a;margin-bottom:8px;">Site Drawing</div>
+            <div style="font-size:0.85em;color:#6c757d;">Create site plans and lightning protection layout drawings</div>
         </div>
-        <div class="report-card available" onclick="location.href='drawing.html'">
-            <div class="report-card-icon">🖊️</div>
-            <div class="report-card-title">Site Drawing</div>
-            <div class="report-card-desc">Create site plans and lightning protection layout drawings.</div>
+
+        <!-- Separation Distance — Coming Soon -->
+        <div style="background:white;border:2px solid #dee2e6;border-radius:12px;padding:28px 20px;text-align:center;opacity:0.5;">
+            <div style="font-size:2.2em;margin-bottom:10px;">📏</div>
+            <div style="font-size:1.1em;font-weight:700;color:#0d1b2a;margin-bottom:8px;">Separation Distance</div>
+            <div style="font-size:0.85em;color:#aaa;font-style:italic;">Coming soon</div>
         </div>
+
     </div>
 </div>
 </body>
