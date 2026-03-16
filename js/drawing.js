@@ -22,7 +22,7 @@ const CANVAS_H = 900;
 // ── State ─────────────────────────────────────────────
 let currentTool   = 'freehand';
 let lineStyle     = 'solid';   // 'solid' | 'dashed'
-let currentColour = '#222';
+let currentColour = '#222222';
 let lineWidth     = 2;
 let earthType     = 'standard'; // 'standard' | 'eq'
 let snapToGrid    = false;
@@ -174,7 +174,7 @@ function setColour(btn) {
     document.querySelectorAll('.colour-swatch').forEach(s => s.classList.remove('active'));
     btn.classList.add('active');
     // Register custom colour in legend if not standard
-    const standards = ['#222', '#e74c3c', '#2980b9', '#27ae60', '#f39c12'];
+    const standards = ['#222222', '#e74c3c', '#2980b9', '#27ae60', '#f39c12'];
     if (!standards.includes(currentColour)) {
         registerColourLegend(currentColour);
     }
@@ -745,7 +745,7 @@ function registerColourLegend(colour) {
 function updateLegend() {
     const hasEarth    = elements.some(e => e.type === 'earth' && !e.eq);
     const hasEQ       = elements.some(e => e.type === 'earth' && e.eq);
-    const hasSolid    = elements.some(e => (e.type === 'freehand' || e.type === 'line') && !e.dashed && e.colour === '#222');
+    const hasSolid    = elements.some(e => (e.type === 'freehand' || e.type === 'line') && !e.dashed && e.colour === '#222222');
     const hasDashed   = elements.some(e => (e.type === 'freehand' || e.type === 'line') && e.dashed);
     const hasRect     = elements.some(e => ['rect','circle','triangle'].includes(e.type));
     const hasMDB      = elements.some(e => e.type === 'mdb');
@@ -763,7 +763,7 @@ function updateLegend() {
     // Custom colour lines
     const customColours = [...new Set(
         elements
-            .filter(e => (e.type === 'freehand' || e.type === 'line') && !e.dashed && e.colour !== '#222')
+            .filter(e => (e.type === 'freehand' || e.type === 'line') && !e.dashed && e.colour !== '#222222')
             .map(e => e.colour)
     )];
     customColours.forEach(c => {
@@ -865,7 +865,7 @@ function buildLegendData() {
     const items = [];
     const hasEarth  = elements.some(e => e.type === 'earth' && !e.eq);
     const hasEQ     = elements.some(e => e.type === 'earth' && e.eq);
-    const hasSolid  = elements.some(e => (e.type === 'freehand'||e.type==='line') && !e.dashed && e.colour==='#222');
+    const hasSolid  = elements.some(e => (e.type === 'freehand'||e.type==='line') && !e.dashed && e.colour==='#222222');
     const hasDashed = elements.some(e => (e.type === 'freehand'||e.type==='line') && e.dashed);
     const hasRect   = elements.some(e => ['rect','circle','triangle'].includes(e.type));
     const hasMDB    = elements.some(e => e.type === 'mdb');
@@ -881,7 +881,7 @@ function buildLegendData() {
 
     // Custom colours
     const customC = [...new Set(
-        elements.filter(e => (e.type==='freehand'||e.type==='line') && !e.dashed && e.colour!=='#222').map(e => e.colour)
+        elements.filter(e => (e.type==='freehand'||e.type==='line') && !e.dashed && e.colour!=='#222222').map(e => e.colour)
     )];
     customC.forEach(c => {
         items.push({ kind:'line', colour:c, dashed:false, label: colourLegend[c] || c });
