@@ -332,8 +332,28 @@ function saveDrawingToReport() {
         const drawingCanvas = window.getDrawingCanvas ? window.getDrawingCanvas() : null;
         if (!drawingCanvas) throw new Error('No canvas found');
 
+        const key = 'striker-drawing-' + reportMode;
+
+        // Save the rendered image
         const imgData = drawingCanvas.toDataURL('image/jpeg', 0.85);
-        localStorage.setItem('striker-drawing-' + reportMode, imgData);
+        localStorage.setItem(key, imgData);
+
+        // Save the drawing state so it can be restored on edit
+        const meta = window.getDrawingMeta ? window.getDrawingMeta() : {};
+        const state = {
+            elements:       typeof elements       !== 'undefined' ? elements       : [],
+            earthCounter:   typeof earthCounter   !== 'undefined' ? earthCounter   : 0,
+            mdbCounter:     typeof mdbCounter     !== 'undefined' ? mdbCounter     : 0,
+            bondCounter:    typeof bondCounter    !== 'undefined' ? bondCounter    : 0,
+            entrancePlaced: typeof entrancePlaced !== 'undefined' ? entrancePlaced : false,
+            colourLegend:   typeof colourLegend   !== 'undefined' ? colourLegend   : {},
+            siteName:       meta.siteName || '',
+            address:        meta.address  || '',
+            drawnBy:        meta.drawnBy  || '',
+            date:           meta.date     || '',
+            legend:         meta.legend   || []
+        };
+        localStorage.setItem(key + '-state', JSON.stringify(state));
 
         const REPORT_URLS = {
             survey:   'survey.html',
