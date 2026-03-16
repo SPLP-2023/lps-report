@@ -16,6 +16,7 @@
     <button class="nav-button back-button" onclick="history.back()">← Back</button>
     <span class="page-title">Site Drawing</span>
     <div class="nav-right">
+        <button class="nav-button tools-toggle-btn" id="btnToggleTools" onclick="toggleToolsDrawer()">🔧 Tools</button>
         <button class="nav-button info-toggle-btn" id="btnTogglePanel" onclick="toggleInfoPanel()">ℹ Details</button>
         <button class="nav-button export-btn" id="btnExportPDF" onclick="exportDrawingPDF()">⬇ PDF</button>
     </div>
@@ -155,6 +156,11 @@
                 <input type="range" id="bgOpacity" min="5" max="100" value="40" oninput="setBgOpacity(this.value)">
                 <span id="bgOpacityLabel">40%</span>
             </label>
+            <label class="ctrl-item" id="bgRotateControls" style="display:none">
+                <span>Rotate</span>
+                <button class="small-btn" onclick="rotateBg(-90)" title="Rotate 90° anti-clockwise">↺ 90°</button>
+                <button class="small-btn" onclick="rotateBg(90)"  title="Rotate 90° clockwise">↻ 90°</button>
+            </label>
             <label class="ctrl-item">
                 <input type="checkbox" id="chkGrid" onchange="toggleGrid(this.checked)">
                 <span>Grid</span>
@@ -235,13 +241,22 @@
 </div><!-- /drawing-app -->
 
 <!-- ══════════════════════════════════════════════
-     MOBILE BOTTOM TOOLBAR
+     MOBILE TOOLS DRAWER (slide up from bottom)
      ══════════════════════════════════════════════ -->
-<div class="mobile-toolbar" id="mobileToolbar">
-    <div class="mob-active-label" id="mobActiveTool">✏ Pen</div>
-    <div class="mob-tool-scroll">
+<div class="mob-drawer-backdrop" id="mobDrawerBackdrop" onclick="toggleToolsDrawer()"></div>
+<div class="mob-drawer" id="mobDrawer">
 
-        <!-- Tools -->
+    <div class="mob-drawer-header">
+        <span class="mob-drawer-title">Drawing Tools</span>
+        <button class="mob-drawer-close" onclick="toggleToolsDrawer()">✕</button>
+    </div>
+
+    <!-- Current active tool indicator -->
+    <div class="mob-active-indicator">Active: <strong id="mobActiveTool">✏ Pen</strong></div>
+
+    <!-- TOOLS -->
+    <div class="mob-section-label">DRAW TOOLS</div>
+    <div class="mob-grid">
         <button class="mob-btn active" id="mob-freehand" onclick="mobSetTool('freehand','✏ Pen',this)">
             <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
             <span>Pen</span>
@@ -262,6 +277,19 @@
             <svg viewBox="0 0 24 24"><polygon points="12,3 22,21 2,21" fill="none" stroke="currentColor" stroke-width="2"/></svg>
             <span>Tri</span>
         </button>
+        <button class="mob-btn" id="mob-select" onclick="mobSetTool('select','↖ Select',this)">
+            <svg viewBox="0 0 24 24"><path d="M4 4l7 18 3-7 7-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span>Select</span>
+        </button>
+        <button class="mob-btn" id="mob-eraser" onclick="mobSetTool('eraser','◻ Erase',this)">
+            <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16l11-11 6 6-2.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span>Erase</span>
+        </button>
+    </div>
+
+    <!-- SYMBOLS -->
+    <div class="mob-section-label">SYMBOLS</div>
+    <div class="mob-grid">
         <button class="mob-btn" id="mob-earth" onclick="mobSetTool('earth','⏚ Earth',this)">
             <svg viewBox="0 0 24 24"><line x1="12" y1="4" x2="12" y2="12" stroke="currentColor" stroke-width="2"/><line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2"/><line x1="6" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="2"/><line x1="9" y1="18" x2="15" y2="18" stroke="currentColor" stroke-width="2"/></svg>
             <span>Earth</span>
@@ -274,53 +302,58 @@
             <svg viewBox="0 0 24 24"><text x="12" y="17" text-anchor="middle" font-size="16" fill="currentColor">⊷</text></svg>
             <span>Bond</span>
         </button>
-        <button class="mob-btn" id="mob-select" onclick="mobSetTool('select','↖ Select',this)">
-            <svg viewBox="0 0 24 24"><path d="M4 4l7 18 3-7 7-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-            <span>Select</span>
-        </button>
-        <button class="mob-btn" id="mob-eraser" onclick="mobSetTool('eraser','◻ Erase',this)">
-            <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16l11-11 6 6-2.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-            <span>Erase</span>
-        </button>
+    </div>
 
-        <div class="mob-sep"></div>
+    <!-- EARTH TYPE -->
+    <div class="mob-section-label">EARTH TYPE</div>
+    <div class="mob-grid">
+        <button class="mob-btn active" id="mob-earth-std" onclick="setEarthType('standard');document.getElementById('mob-earth-std').classList.add('active');document.getElementById('mob-earth-eq').classList.remove('active')">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="4" x2="12" y2="12" stroke="currentColor" stroke-width="2"/><line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2"/><line x1="6" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="2"/><line x1="9" y1="18" x2="15" y2="18" stroke="currentColor" stroke-width="2"/></svg>
+            <span>Standard E</span>
+        </button>
+        <button class="mob-btn" id="mob-earth-eq" onclick="setEarthType('eq');document.getElementById('mob-earth-eq').classList.add('active');document.getElementById('mob-earth-std').classList.remove('active')">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="10" stroke="currentColor" stroke-width="2"/><line x1="4" y1="10" x2="20" y2="10" stroke="currentColor" stroke-width="2"/><line x1="6" y1="13" x2="18" y2="13" stroke="currentColor" stroke-width="2"/><line x1="9" y1="16" x2="15" y2="16" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="8" fill="none" stroke="#0877c3" stroke-width="1.5"/></svg>
+            <span>EQ Earth</span>
+        </button>
+    </div>
 
-        <!-- Line style -->
+    <!-- LINE STYLE -->
+    <div class="mob-section-label">LINE STYLE</div>
+    <div class="mob-grid">
         <button class="mob-btn active" id="mob-solid" onclick="setLineStyle('solid');syncMobStyle()">
             <svg viewBox="0 0 24 8"><line x1="2" y1="4" x2="22" y2="4" stroke="currentColor" stroke-width="2.5"/></svg>
             <span>Solid</span>
         </button>
         <button class="mob-btn" id="mob-dashed" onclick="setLineStyle('dashed');syncMobStyle()">
             <svg viewBox="0 0 24 8"><line x1="2" y1="4" x2="22" y2="4" stroke="#e74c3c" stroke-width="2.5" stroke-dasharray="5,3"/></svg>
-            <span>Dash</span>
+            <span>Dashed (Conductor)</span>
         </button>
+    </div>
 
-        <!-- Colours -->
+    <!-- COLOURS -->
+    <div class="mob-section-label">COLOUR</div>
+    <div class="mob-colour-row">
         <button class="mob-colour active" id="mob-col-222222" style="background:#222222;" data-colour="#222222" onclick="setColour(this);syncMobColour(this)"></button>
         <button class="mob-colour" id="mob-col-e74c3c" style="background:#e74c3c;" data-colour="#e74c3c" onclick="setColour(this);syncMobColour(this)"></button>
         <button class="mob-colour" id="mob-col-2980b9" style="background:#2980b9;" data-colour="#2980b9" onclick="setColour(this);syncMobColour(this)"></button>
         <button class="mob-colour" id="mob-col-27ae60" style="background:#27ae60;" data-colour="#27ae60" onclick="setColour(this);syncMobColour(this)"></button>
         <button class="mob-colour" id="mob-col-f39c12" style="background:#f39c12;" data-colour="#f39c12" onclick="setColour(this);syncMobColour(this)"></button>
-        <button class="mob-colour mob-custom-col" title="Custom">
+        <button class="mob-colour mob-custom-col" title="Custom colour">
             <input type="color" value="#8e44ad" onchange="setCustomColour(this.value)">
             <span>+</span>
         </button>
+    </div>
 
-        <div class="mob-sep"></div>
+    <!-- LINE WIDTH -->
+    <div class="mob-section-label">LINE WIDTH</div>
+    <div class="mob-width-row">
+        <input type="range" id="mobLineWidth" min="1" max="10" value="2" oninput="setLineWidth(this.value);document.getElementById('mobLineWidthLabel').textContent=this.value+'px'" style="flex:1;">
+        <span id="mobLineWidthLabel" style="font-size:12px;color:#ccc;min-width:28px;text-align:right;">2px</span>
+    </div>
 
-        <!-- Earth type -->
-        <button class="mob-btn active" id="mob-earth-std" onclick="setEarthType('standard');this.classList.add('active');document.getElementById('mob-earth-eq').classList.remove('active')">
-            <svg viewBox="0 0 24 24"><line x1="12" y1="4" x2="12" y2="12" stroke="currentColor" stroke-width="2"/><line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2"/><line x1="6" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="2"/><line x1="9" y1="18" x2="15" y2="18" stroke="currentColor" stroke-width="2"/></svg>
-            <span>Std E</span>
-        </button>
-        <button class="mob-btn" id="mob-earth-eq" onclick="setEarthType('eq');this.classList.add('active');document.getElementById('mob-earth-std').classList.remove('active')">
-            <svg viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="10" stroke="currentColor" stroke-width="2"/><line x1="4" y1="10" x2="20" y2="10" stroke="currentColor" stroke-width="2"/><line x1="6" y1="13" x2="18" y2="13" stroke="currentColor" stroke-width="2"/><line x1="9" y1="16" x2="15" y2="16" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="8" fill="none" stroke="#0877c3" stroke-width="1.5"/></svg>
-            <span>EQ</span>
-        </button>
-
-        <div class="mob-sep"></div>
-
-        <!-- Actions -->
+    <!-- ACTIONS -->
+    <div class="mob-section-label">ACTIONS</div>
+    <div class="mob-grid">
         <button class="mob-btn" onclick="undo()">
             <svg viewBox="0 0 24 24"><path d="M3 10h10c4 0 7 3 7 7s-3 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="3,6 3,10 7,10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             <span>Undo</span>
@@ -331,11 +364,11 @@
         </button>
         <button class="mob-btn mob-danger" onclick="clearCanvas()">
             <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-            <span>Clear</span>
+            <span>Clear All</span>
         </button>
-
     </div>
-</div>
+
+</div><!-- /mob-drawer -->
 
 <script src="js/drawing.js"></script>
 <script src="js/drawing-pdf.js"></script>
@@ -351,24 +384,39 @@
     // Info panel toggle
     function toggleInfoPanel() {
         document.getElementById('infoPanel').classList.toggle('panel-open');
+        document.getElementById('mobDrawer').classList.remove('drawer-open');
+        document.getElementById('mobDrawerBackdrop').classList.remove('backdrop-open');
     }
 
-    // Mobile tool selection — syncs with desktop toolbar state
+    // Tools drawer toggle
+    function toggleToolsDrawer() {
+        const drawer   = document.getElementById('mobDrawer');
+        const backdrop = document.getElementById('mobDrawerBackdrop');
+        const isOpen   = drawer.classList.contains('drawer-open');
+        drawer.classList.toggle('drawer-open');
+        backdrop.classList.toggle('backdrop-open');
+        // Close info panel if open
+        if (!isOpen) document.getElementById('infoPanel').classList.remove('panel-open');
+    }
+
+    // Mobile tool selection
+    const MOB_TOOL_IDS = ['mob-freehand','mob-line','mob-rect','mob-circle',
+                          'mob-triangle','mob-earth','mob-mdb','mob-bond',
+                          'mob-select','mob-eraser'];
+
     function mobSetTool(tool, label, btn) {
         setTool(tool);
-        document.querySelectorAll('.mob-btn[id^="mob-"]:not([id*="earth"]):not([id*="solid"]):not([id*="dashed"])').forEach(b => {
-            if (b.id.startsWith('mob-') && !b.id.includes('earth') && !b.id.includes('solid') && !b.id.includes('dashed')) {
-                b.classList.remove('active');
-            }
-        });
-        // Simpler: just remove active from all tool buttons
-        document.querySelectorAll('.mob-btn').forEach(b => {
-            const isToolBtn = ['mob-freehand','mob-line','mob-rect','mob-circle','mob-triangle',
-                               'mob-earth','mob-mdb','mob-bond','mob-select','mob-eraser'].includes(b.id);
-            if (isToolBtn) b.classList.remove('active');
+        MOB_TOOL_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('active');
         });
         btn.classList.add('active');
         document.getElementById('mobActiveTool').textContent = label;
+        // Close drawer after selecting a tool — return user to canvas
+        setTimeout(() => {
+            document.getElementById('mobDrawer').classList.remove('drawer-open');
+            document.getElementById('mobDrawerBackdrop').classList.remove('backdrop-open');
+        }, 200);
     }
 
     function syncMobStyle() {
