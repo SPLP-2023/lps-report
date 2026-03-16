@@ -112,6 +112,14 @@
             <span>Bond</span>
         </button>
 
+        <button class="tool-btn" id="tool-entrance" title="Entrance (one only)" onclick="setTool('entrance')">
+            <svg viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
+                <text x="12" y="17" text-anchor="middle" font-size="11" font-weight="bold" fill="currentColor">E</text>
+            </svg>
+            <span>Entrance</span>
+        </button>
+
         <div class="toolbar-divider"></div>
         <div class="toolbar-section-label">EDIT</div>
 
@@ -307,6 +315,13 @@
             <svg viewBox="0 0 24 24"><text x="12" y="17" text-anchor="middle" font-size="16" fill="currentColor">⊷</text></svg>
             <span>Bond</span>
         </button>
+        <button class="mob-btn" id="mob-entrance" onclick="mobSetTool('entrance','E Entrance',this)">
+            <svg viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
+                <text x="12" y="17" text-anchor="middle" font-size="11" font-weight="bold" fill="currentColor">E</text>
+            </svg>
+            <span>Entrance</span>
+        </button>
     </div>
 
     <!-- EARTH TYPE -->
@@ -407,7 +422,7 @@
     // Mobile tool selection
     const MOB_TOOL_IDS = ['mob-freehand','mob-line','mob-rect','mob-circle',
                           'mob-triangle','mob-earth','mob-mdb','mob-bond',
-                          'mob-select','mob-eraser'];
+                          'mob-entrance','mob-select','mob-eraser'];
 
     function mobSetTool(tool, label, btn) {
         setTool(tool);
