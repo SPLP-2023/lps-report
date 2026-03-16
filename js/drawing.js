@@ -706,9 +706,9 @@ function drawElement(ctx, el, selected) {
 // ── Symbol renderers ───────────────────────────────────
 function drawEarthSymbol(ctx, x, y, eq, label) {
     ctx.strokeStyle = '#1a1a1a';
-    ctx.lineWidth   = 2;
+    ctx.lineWidth   = 2.5;
     ctx.setLineDash([]);
-    const sz = 22;
+    const sz = 36;  // increased from 22
 
     // Vertical stem
     ctx.beginPath();
@@ -717,7 +717,7 @@ function drawEarthSymbol(ctx, x, y, eq, label) {
     ctx.stroke();
 
     // Three horizontal lines (earth symbol)
-    [[0, 1], [4, 0.65], [8, 0.35]].forEach(([offset, scale]) => {
+    [[0, 1], [6, 0.65], [12, 0.35]].forEach(([offset, scale]) => {
         ctx.beginPath();
         ctx.moveTo(x - sz * scale / 2, y + offset);
         ctx.lineTo(x + sz * scale / 2, y + offset);
@@ -727,47 +727,66 @@ function drawEarthSymbol(ctx, x, y, eq, label) {
     // EQ circle
     if (eq) {
         ctx.beginPath();
-        ctx.arc(x, y + 2, sz * 0.72, 0, Math.PI * 2);
+        ctx.arc(x, y + 4, sz * 0.72, 0, Math.PI * 2);
         ctx.strokeStyle = '#0877c3';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.stroke();
     }
 
-    // Label above
+    // Label above — larger font
     ctx.fillStyle = '#1a1a1a';
-    ctx.font      = 'bold 11px Arial';
+    ctx.font      = 'bold 16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(label, x, y - sz / 2 - 4);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(label, x, y - sz / 2 - 6);
 }
 
 function drawMDBSymbol(ctx, x, y, label) {
     ctx.setLineDash([]);
-    const w = 44, h = 22;
+    const w = 54, h = 26;
     ctx.strokeStyle = '#1a1a1a';
     ctx.lineWidth = 2;
     ctx.strokeRect(x - w / 2, y - h / 2, w, h);
     ctx.fillStyle = '#f8f9fa';
     ctx.fillRect(x - w / 2 + 1, y - h / 2 + 1, w - 2, h - 2);
     ctx.fillStyle = '#1a1a1a';
-    ctx.font = 'bold 10px Arial';
+    ctx.font = 'bold 13px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('MDB', x, y);
     ctx.textBaseline = 'alphabetic';
-    ctx.font = '10px Arial';
-    ctx.fillText(label !== 'MDB' ? label.replace('MDB', '') : '', x, y - h / 2 - 4);
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText(label !== 'MDB' ? label.replace('MDB', '') : '', x, y - h / 2 - 6);
 }
 
 function drawBondSymbol(ctx, x, y, label) {
     ctx.setLineDash([]);
+    // Draw bond symbol using lines and filled circle (avoids Unicode font issues)
+    const r = 10;
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.fillStyle   = '#1a1a1a';
+    ctx.lineWidth   = 2.5;
+    // Horizontal bar left
+    ctx.beginPath();
+    ctx.moveTo(x - r * 2.2, y);
+    ctx.lineTo(x - r, y);
+    ctx.stroke();
+    // Filled circle
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Horizontal bar right
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + r * 2.2, y);
+    ctx.stroke();
+    // Label above — larger font
     ctx.fillStyle = '#1a1a1a';
-    ctx.font = '22px Arial';
+    ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('⊷', x, y);
-    ctx.font = 'bold 10px Arial';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(label, x, y - 16);
+    ctx.fillText(label, x, y - r - 6);
+}
 }
 
 // ── Redraw main canvas ─────────────────────────────────
@@ -1075,7 +1094,13 @@ function legendRow(kind, colour, special, label) {
     }
     if (special === 'bond') {
         return `<div class="legend-item">
-            <div class="legend-swatch" style="font-size:18px;line-height:1;">⊷</div>
+            <div class="legend-swatch">
+                <svg width="28" height="14" viewBox="0 0 28 14">
+                    <line x1="1" y1="7" x2="10" y2="7" stroke="#1a1a1a" stroke-width="2"/>
+                    <circle cx="14" cy="7" r="4" fill="#1a1a1a"/>
+                    <line x1="18" y1="7" x2="27" y2="7" stroke="#1a1a1a" stroke-width="2"/>
+                </svg>
+            </div>
             <span class="legend-label">${label}</span>
         </div>`;
     }
