@@ -482,18 +482,19 @@ async function generateSurveyPDF() {
     svBuildNextSteps(pdf);
     
         // ── Append site drawing if saved ──────────────────────
-        const surveyDrawing = localStorage.getItem('striker-drawing-survey');
-        if (surveyDrawing) {
-            const drawingMeta = {
-                siteName: siteName || '',
-                address:  siteAddress || '',
-                date:     surveyDate || '',
-                legend:   []
-            };
-            await buildDrawingPage(pdf, surveyDrawing, drawingMeta, true);
-        }
-        // ─────────────────────────────────────────────────────
-    
-        const namePart = (siteName || jobReference || 'Survey').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
-        pdf.save(`Lightning Protection Survey Report - ${namePart} ${svFormatDateShort(surveyDate)}.pdf`);
+    const surveyDrawing = localStorage.getItem('striker-drawing-survey');
+    if (surveyDrawing) {
+        const savedState = JSON.parse(localStorage.getItem('striker-drawing-survey-state') || '{}');
+        const drawingMeta = {
+            siteName: siteName    || '',
+            address:  siteAddress || '',
+            date:     surveyDate  || '',
+            legend:   savedState.legend || []
+        };
+        await buildDrawingPage(pdf, surveyDrawing, drawingMeta, true);
     }
+    // ─────────────────────────────────────────────────────
+
+    const namePart = (siteName || jobReference || 'Survey').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
+    pdf.save(`Lightning Protection Survey Report - ${namePart} ${svFormatDateShort(surveyDate)}.pdf`);
+}
