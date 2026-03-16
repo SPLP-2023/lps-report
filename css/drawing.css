@@ -268,29 +268,22 @@ body {
     50%       { box-shadow: 0 0 0 4px rgba(230,126,34,0); }
 }
 
-/* Mobile: canvas scales to fit screen width, no horizontal scroll */
+/* Mobile: canvas fills screen, JS handles sizing via fitCanvas() */
 @media (max-width: 768px) {
     .canvas-wrapper {
         padding: 0;
         overflow: hidden;
-        align-items: center;
-        justify-content: center;
+        background: #d8dce2;
     }
-    /* Scale all three canvases to fill the available width */
-    #bgCanvas, #mainCanvas, #previewCanvas {
-        position: absolute;
-        top: 0; left: 0;
-        width: 100% !important;
-        height: auto !important;
-        border-radius: 0;
-        box-shadow: none;
-    }
-    /* Canvas wrapper height matches scaled canvas aspect ratio */
     .canvas-area {
         display: flex;
         flex-direction: column;
         flex: 1;
         overflow: hidden;
+    }
+    #bgCanvas, #mainCanvas, #previewCanvas {
+        border-radius: 0;
+        box-shadow: none;
     }
 }
 
@@ -407,6 +400,11 @@ body {
     padding: 2px 5px;
     width: 100%;
     color: #333;
+}
+.legend-item-custom {
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
 }
 .legend-empty { font-size: 11px; color: #aaa; font-style: italic; }
 
