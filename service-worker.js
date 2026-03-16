@@ -12,6 +12,8 @@ const ASSETS = [
     './js/touch-signature.js',
     './js/ti-report.js',
     './js/ti-pdf-generator.js',
+    './js/survey-drawing-script.js',
+    './js/pdf-survey-drawing-append.js',
     './manifest.json',
     './assets/Color logo - no background (px reduction).png',
     './assets/SP Bolt 400x400.png',
