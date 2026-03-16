@@ -1,65 +1,69 @@
 // ── Survey PDF — Drawing Page Append ────────────────────
-// This file wraps generateSurveyPDF to append a drawing page if one is saved.
+// Replaces the wrapper approach with a direct override of generateSurveyPDF.
 // Include AFTER pdf-generator-survey.js in survey.html.
 
-(function() {
-    const _originalGenerate = window.generateSurveyPDF;
+(function () {
+    // Wait until pdf-generator-survey.js has defined generateSurveyPDF
+    const _original = window.generateSurveyPDF;
 
-    window.generateSurveyPDF = function() {
-        // Run the original generator — it handles validation + save internally
-        // We intercept by overriding pdf.save temporarily
+    window.generateSurveyPDF = async function () {
         const drawingData = localStorage.getItem('striker-drawing-survey');
+
         if (!drawingData) {
-            // No drawing — run as normal
-            _originalGenerate();
+            // No drawing — run original unchanged
+            _original();
             return;
         }
 
-        // Patch jsPDF save to intercept before saving
-        const { jsPDF } = window.jspdf;
-        const _originalSave = jsPDF.prototype.save;
+        // ── Patch: intercept pdf.save on the jsPDF instance ──
+        // We temporarily override jsPDF so the instance created inside
+        // generateSurveyPDF calls our wrapper instead of the real save.
+        const { jsPDF: OriginalJsPDF } = window.jspdf;
 
-        jsPDF.prototype.save = function(filename) {
-            // Restore original save immediately to avoid infinite loop
-            jsPDF.prototype.save = _originalSave;
+        // Proxy class — same as jsPDF but save() appends drawing first
+        class PatchedJsPDF extends OriginalJsPDF {
+            save(filename) {
+                try {
+                    // Add landscape A3 page
+                    this.addPage([420, 297], 'landscape');
 
-            try {
-                // Add a new landscape A3 page for the drawing
-                this.addPage('a3', 'landscape');
+                    const PW = 420, PH = 297, M = 8;
 
-                const PW = this.internal.pageSize.getWidth();
-                const PH = this.internal.pageSize.getHeight();
-                const M  = 8;
+                    // Outer border
+                    this.setDrawColor(30, 30, 30);
+                    this.setLineWidth(0.4);
+                    this.rect(M, M, PW - M * 2, PH - M * 2);
 
-                // Outer border
-                this.setDrawColor(30, 30, 30);
-                this.setLineWidth(0.4);
-                this.rect(M, M, PW - M * 2, PH - M * 2);
+                    // Drawing image — letterbox fit inside border
+                    const tmpImg    = new Image();
+                    tmpImg.src      = drawingData;
+                    const cW        = tmpImg.naturalWidth  || 1400;
+                    const cH        = tmpImg.naturalHeight || 900;
+                    const areaW     = PW - M * 2;
+                    const areaH     = PH - M * 2;
+                    const fit       = Math.min(areaW / cW, areaH / cH);
+                    const fitW      = cW * fit;
+                    const fitH      = cH * fit;
+                    const offX      = M + (areaW - fitW) / 2;
+                    const offY      = M + (areaH - fitH) / 2;
+                    this.addImage(drawingData, 'JPEG', offX, offY, fitW, fitH);
 
-                // Drawing image — fill the full page inside the border
-                const img    = new Image();
-                img.src      = drawingData;
-                const cW     = img.naturalWidth  || 1400;
-                const cH     = img.naturalHeight || 900;
-                const areaW  = PW - M * 2;
-                const areaH  = PH - M * 2;
-                const fit    = Math.min(areaW / cW, areaH / cH);
-                const fitW   = cW * fit;
-                const fitH   = cH * fit;
-                const offX   = M + (areaW - fitW) / 2;
-                const offY   = M + (areaH - fitH) / 2;
-
-                this.addImage(drawingData, 'JPEG', offX, offY, fitW, fitH);
-
-            } catch(e) {
-                console.error('Drawing append failed:', e);
+                } catch (e) {
+                    console.error('Drawing page append failed:', e);
+                }
+                // Now do the real save
+                super.save(filename);
             }
+        }
 
-            // Now save with original method
-            _originalSave.call(this, filename);
-        };
+        // Temporarily replace jsPDF in the window.jspdf namespace
+        window.jspdf.jsPDF = PatchedJsPDF;
 
-        // Run original generator — it will call pdf.save() which we've patched
-        _originalGenerate();
+        try {
+            _original();
+        } finally {
+            // Always restore the original jsPDF
+            window.jspdf.jsPDF = OriginalJsPDF;
+        }
     };
 })();
