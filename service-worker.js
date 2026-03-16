@@ -13,7 +13,6 @@ const ASSETS = [
     './js/ti-report.js',
     './js/ti-pdf-generator.js',
     './js/survey-drawing-script.js',
-    './js/pdf-survey-drawing-append.js',
     './js/drawing-pdf.js',
     './js/ti-drawing-script.js',
     './manifest.json',
