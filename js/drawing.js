@@ -439,7 +439,9 @@ previewCanvas.addEventListener('touchend', e => {
     e.preventDefault();
     if (pinchActive) { pinchActive = false; return; }
     if (twoFingerPanning) { twoFingerPanning = false; return; }
-    onPointerUp(e);
+    // Use changedTouches — e.touches is empty on touchend
+    const syntheticE = { touches: e.changedTouches };
+    onPointerUp(syntheticE);
 }, { passive: false });
 
 let twoFingerPanning = false;
@@ -965,54 +967,63 @@ function resetEarthCounter() {
     redrawMain();
 }
 
-// ── Custom colour legend ───────────────────────────────
-function registerColourLegend(colour) {
-    if (!colourLegend[colour]) {
-        colourLegend[colour] = '';
-        updateLegend();
-    }
-}
+// ── Predefined colour map ─────────────────────────────
+// These colours always get a fixed label — no user input needed
+const PREDEFINED_COLOURS = {
+    '#222222': 'Building / Structure',
+    '#e74c3c': 'Conductor',           // also used for dashed
+};
+// These colours need a user-typed label
+const PALETTE_COLOURS = ['#2980b9', '#27ae60', '#f39c12'];
 
 // ── Legend ─────────────────────────────────────────────
 function updateLegend() {
-    const hasEarth    = elements.some(e => e.type === 'earth' && !e.eq);
-    const hasEQ       = elements.some(e => e.type === 'earth' && e.eq);
-    const hasSolid    = elements.some(e => (e.type === 'freehand' || e.type === 'line' || ['rect','circle','triangle'].includes(e.type)) && !e.dashed && (e.colour === '#222222' || !e.colour || ['rect','circle','triangle'].includes(e.type)));
-    const hasDashed   = elements.some(e => (e.type === 'freehand' || e.type === 'line') && e.dashed);
-    const hasMDB      = elements.some(e => e.type === 'mdb');
-    const hasBond     = elements.some(e => e.type === 'bond');
+    const hasEarth  = elements.some(e => e.type === 'earth' && !e.eq);
+    const hasEQ     = elements.some(e => e.type === 'earth' && e.eq);
+    const hasBlack  = elements.some(e =>
+        (e.type === 'freehand' || e.type === 'line' || ['rect','circle','triangle'].includes(e.type))
+        && !e.dashed && (e.colour === '#222222' || !e.colour));
+    const hasDashed = elements.some(e => (e.type === 'freehand' || e.type === 'line') && e.dashed);
+    const hasMDB    = elements.some(e => e.type === 'mdb');
+    const hasBond   = elements.some(e => e.type === 'bond');
 
     let html = '';
-    if (hasEarth)  html += legendRow('symbol', null, 'earth-std',  'Standard Earth (E)');
-    if (hasEQ)     html += legendRow('symbol', null, 'earth-eq',   'EQ / Protective Earth');
-    if (hasSolid)  html += legendRow('line',   '#222222', false,   'Building / Structure');
-    if (hasDashed) html += legendRow('line',   '#e74c3c', true,    'Conductor (Down / Air Terminal)');
-    if (hasMDB)    html += legendRow('symbol', null, 'mdb',        'MDB – Main Distribution Board');
-    if (hasBond)   html += legendRow('symbol', null, 'bond',       'Bond Point');
+    if (hasEarth)  html += legendRow('symbol', null,      'earth-std', 'Standard Earth (E)');
+    if (hasEQ)     html += legendRow('symbol', null,      'earth-eq',  'EQ / Protective Earth');
+    if (hasBlack)  html += legendRow('line',   '#222222', false,       'Building / Structure');
+    if (hasDashed) html += legendRow('line',   '#e74c3c', true,        'Conductor');
+    if (hasMDB)    html += legendRow('symbol', null,      'mdb',       'MDB – Main Distribution Board');
+    if (hasBond)   html += legendRow('symbol', null,      'bond',      'Bond Point');
 
-    // Custom colour lines
-    const customColours = [...new Set(
+    // Collect all non-black, non-dashed colours used on canvas
+    const usedCustomColours = [...new Set(
         elements
-            .filter(e => (e.type === 'freehand' || e.type === 'line') && !e.dashed && e.colour !== '#222222')
+            .filter(e =>
+                (e.type === 'freehand' || e.type === 'line' || ['rect','circle','triangle'].includes(e.type))
+                && !e.dashed
+                && e.colour
+                && e.colour !== '#222222')
             .map(e => e.colour)
     )];
-    customColours.forEach(c => {
-        if (!colourLegend[c]) colourLegend[c] = '';
+
+    usedCustomColours.forEach(c => {
+        if (!(c in colourLegend)) colourLegend[c] = '';
         html += legendRowCustom(c, colourLegend[c]);
     });
+
     // Remove colours no longer on canvas
     Object.keys(colourLegend).forEach(c => {
-        if (!customColours.includes(c)) delete colourLegend[c];
+        if (!usedCustomColours.includes(c)) delete colourLegend[c];
     });
 
     if (!html) html = '<div class="legend-empty">Add elements to the canvas to build the legend.</div>';
     document.getElementById('legendList').innerHTML = html;
 
-    // Attach input listeners for custom colour labels
-    customColours.forEach(c => {
-        const inp = document.getElementById('legend-input-' + CSS.escape(c));
+    // Re-attach input listeners
+    usedCustomColours.forEach(c => {
+        const id  = 'legend-input-' + c.replace('#', '');
+        const inp = document.getElementById(id);
         if (inp) {
-            inp.value = colourLegend[c] || '';
             inp.addEventListener('input', function() {
                 colourLegend[c] = this.value;
             });
@@ -1022,49 +1033,65 @@ function updateLegend() {
 
 function legendRow(kind, colour, special, label) {
     if (kind === 'line') {
-        const dash = special ? 'border-top: 2px dashed ' + colour : 'border-top: 2.5px solid ' + colour;
+        const style = special
+            ? `border-top:2.5px dashed ${colour};height:0;width:30px;margin-top:8px;`
+            : `border-top:2.5px solid ${colour};height:0;width:30px;margin-top:8px;`;
         return `<div class="legend-item">
-            <div class="legend-swatch" style="${dash};height:0;width:28px;margin-top:7px;"></div>
+            <div class="legend-swatch" style="${style}"></div>
             <span class="legend-label">${label}</span>
         </div>`;
     }
     if (special === 'earth-std') {
-        return `<div class="legend-item"><div class="legend-swatch"><svg width="22" height="18" viewBox="0 0 22 18">
-            <line x1="11" y1="0" x2="11" y2="8" stroke="#1a1a1a" stroke-width="1.8"/>
-            <line x1="1" y1="8" x2="21" y2="8" stroke="#1a1a1a" stroke-width="1.8"/>
-            <line x1="4" y1="12" x2="18" y2="12" stroke="#1a1a1a" stroke-width="1.8"/>
-            <line x1="7" y1="16" x2="15" y2="16" stroke="#1a1a1a" stroke-width="1.8"/>
-        </svg></div><span class="legend-label">${label}</span></div>`;
+        return `<div class="legend-item">
+            <div class="legend-swatch"><svg width="22" height="18" viewBox="0 0 22 18">
+                <line x1="11" y1="0" x2="11" y2="8" stroke="#1a1a1a" stroke-width="1.8"/>
+                <line x1="1" y1="8" x2="21" y2="8" stroke="#1a1a1a" stroke-width="1.8"/>
+                <line x1="4" y1="12" x2="18" y2="12" stroke="#1a1a1a" stroke-width="1.8"/>
+                <line x1="7" y1="16" x2="15" y2="16" stroke="#1a1a1a" stroke-width="1.8"/>
+            </svg></div>
+            <span class="legend-label">${label}</span>
+        </div>`;
     }
     if (special === 'earth-eq') {
-        return `<div class="legend-item"><div class="legend-swatch"><svg width="22" height="22" viewBox="0 0 22 22">
-            <line x1="11" y1="1" x2="11" y2="8" stroke="#1a1a1a" stroke-width="1.8"/>
-            <line x1="2" y1="8" x2="20" y2="8" stroke="#1a1a1a" stroke-width="1.8"/>
-            <line x1="5" y1="11" x2="17" y2="11" stroke="#1a1a1a" stroke-width="1.8"/>
-            <line x1="8" y1="14" x2="14" y2="14" stroke="#1a1a1a" stroke-width="1.8"/>
-            <circle cx="11" cy="11" r="9" fill="none" stroke="#0877c3" stroke-width="1.5"/>
-        </svg></div><span class="legend-label">${label}</span></div>`;
+        return `<div class="legend-item">
+            <div class="legend-swatch"><svg width="22" height="22" viewBox="0 0 22 22">
+                <line x1="11" y1="1" x2="11" y2="8" stroke="#1a1a1a" stroke-width="1.8"/>
+                <line x1="2" y1="8" x2="20" y2="8" stroke="#1a1a1a" stroke-width="1.8"/>
+                <line x1="5" y1="11" x2="17" y2="11" stroke="#1a1a1a" stroke-width="1.8"/>
+                <line x1="8" y1="14" x2="14" y2="14" stroke="#1a1a1a" stroke-width="1.8"/>
+                <circle cx="11" cy="11" r="9" fill="none" stroke="#0877c3" stroke-width="1.5"/>
+            </svg></div>
+            <span class="legend-label">${label}</span>
+        </div>`;
     }
     if (special === 'mdb') {
-        return `<div class="legend-item"><div class="legend-swatch"><svg width="28" height="14" viewBox="0 0 28 14">
-            <rect x="1" y="1" width="26" height="12" rx="2" fill="#f8f9fa" stroke="#1a1a1a" stroke-width="1.5"/>
-            <text x="14" y="10" text-anchor="middle" font-size="7" font-weight="bold" fill="#1a1a1a">MDB</text>
-        </svg></div><span class="legend-label">${label}</span></div>`;
+        return `<div class="legend-item">
+            <div class="legend-swatch"><svg width="28" height="14" viewBox="0 0 28 14">
+                <rect x="1" y="1" width="26" height="12" rx="2" fill="#f8f9fa" stroke="#1a1a1a" stroke-width="1.5"/>
+                <text x="14" y="10" text-anchor="middle" font-size="7" font-weight="bold" fill="#1a1a1a">MDB</text>
+            </svg></div>
+            <span class="legend-label">${label}</span>
+        </div>`;
     }
     if (special === 'bond') {
-        return `<div class="legend-item"><div class="legend-swatch" style="font-size:18px;line-height:1;">⊷</div>
-            <span class="legend-label">${label}</span></div>`;
+        return `<div class="legend-item">
+            <div class="legend-swatch" style="font-size:18px;line-height:1;">⊷</div>
+            <span class="legend-label">${label}</span>
+        </div>`;
     }
     return '';
 }
 
 function legendRowCustom(colour, labelVal) {
     const id = 'legend-input-' + colour.replace('#', '');
-    return `<div class="legend-item" style="flex-wrap:wrap;gap:4px;">
-        <div class="legend-swatch" style="border-top:2.5px solid ${colour};height:0;width:28px;margin-top:7px;"></div>
-        <input class="legend-label-input" id="${id}" type="text" placeholder="Label this colour..." value="${labelVal || ''}">
+    return `<div class="legend-item legend-item-custom">
+        <div class="legend-swatch" style="border-top:2.5px solid ${colour};height:0;width:30px;margin-top:8px;flex-shrink:0;"></div>
+        <input class="legend-label-input" id="${id}" type="text"
+            placeholder="Label this colour…"
+            value="${labelVal || ''}">
     </div>`;
 }
+
 
 // ── Expose canvas for PDF export ───────────────────────
 window.getDrawingCanvas = function() {
@@ -1096,24 +1123,32 @@ function buildLegendData() {
     const items = [];
     const hasEarth  = elements.some(e => e.type === 'earth' && !e.eq);
     const hasEQ     = elements.some(e => e.type === 'earth' && e.eq);
-    const hasSolid  = elements.some(e => (e.type === 'freehand'||e.type==='line'||['rect','circle','triangle'].includes(e.type)) && !e.dashed);
+    const hasBlack  = elements.some(e =>
+        (e.type === 'freehand'||e.type==='line'||['rect','circle','triangle'].includes(e.type))
+        && !e.dashed && (e.colour === '#222222' || !e.colour));
     const hasDashed = elements.some(e => (e.type === 'freehand'||e.type==='line') && e.dashed);
     const hasMDB    = elements.some(e => e.type === 'mdb');
     const hasBond   = elements.some(e => e.type === 'bond');
 
     if (hasEarth)  items.push({ kind:'earth-std',  label:'Standard Earth (E)' });
     if (hasEQ)     items.push({ kind:'earth-eq',   label:'EQ / Protective Earth' });
-    if (hasSolid)  items.push({ kind:'line',  colour:'#222222', dashed:false, label:'Building / Structure' });
-    if (hasDashed) items.push({ kind:'line',  colour:'#e74c3c', dashed:true,  label:'Conductor' });
-    if (hasMDB)    items.push({ kind:'mdb',   label:'MDB – Main Distribution Board' });
-    if (hasBond)   items.push({ kind:'bond',  label:'Bond Point' });
+    if (hasBlack)  items.push({ kind:'line', colour:'#222222', dashed:false, label:'Building / Structure' });
+    if (hasDashed) items.push({ kind:'line', colour:'#e74c3c', dashed:true,  label:'Conductor' });
+    if (hasMDB)    items.push({ kind:'mdb',  label:'MDB – Main Distribution Board' });
+    if (hasBond)   items.push({ kind:'bond', label:'Bond Point' });
 
-    // Custom colours
+    // Custom colours — all non-black non-dashed colours
     const customC = [...new Set(
-        elements.filter(e => (e.type==='freehand'||e.type==='line') && !e.dashed && e.colour!=='#222222').map(e => e.colour)
+        elements
+            .filter(e =>
+                (e.type==='freehand'||e.type==='line'||['rect','circle','triangle'].includes(e.type))
+                && !e.dashed && e.colour && e.colour !== '#222222')
+            .map(e => e.colour)
     )];
     customC.forEach(c => {
-        items.push({ kind:'line', colour:c, dashed:false, label: colourLegend[c] || c });
+        // Use user-typed label if available, else fallback to "Unnamed"
+        const label = (colourLegend[c] && colourLegend[c].trim()) ? colourLegend[c].trim() : 'Unnamed';
+        items.push({ kind:'line', colour:c, dashed:false, label });
     });
     return items;
 }
@@ -1122,26 +1157,37 @@ function buildLegendData() {
 drawGrid();
 setTool('freehand');
 document.getElementById('earth-type-opts').style.display = 'none';
-// Start with bg locked state shown correctly
 updateBgLockUI();
 
-// ── Mobile canvas scaling ───────────────────────────────
-// On mobile the CSS sets canvas width:100%, height:auto
-// We need the wrapper height to match the aspect ratio so nothing is clipped
-function fitCanvasToMobile() {
-    if (window.innerWidth > 768) return;
-    const wrapper    = document.getElementById('canvasWrapper');
+// ── Canvas scaling ─────────────────────────────────────
+// Mobile: scale canvas to fill screen width (no horizontal scroll)
+// Desktop: ensure canvas CSS size is not overridden by mobile styles
+function fitCanvas() {
+    const isMobile = window.innerWidth <= 768;
     const canvasArea = document.getElementById('canvasArea');
-    const aspect     = CANVAS_H / CANVAS_W;
-    const w          = canvasArea.clientWidth;
-    const h          = w * aspect;
-    wrapper.style.height = h + 'px';
-    // All three canvases display at same CSS size
-    [bgCanvas, mainCanvas, previewCanvas].forEach(c => {
-        c.style.width  = w + 'px';
-        c.style.height = h + 'px';
-    });
+    const wrapper    = document.getElementById('canvasWrapper');
+
+    if (isMobile) {
+        const w = canvasArea.clientWidth;
+        const h = Math.round(w * CANVAS_H / CANVAS_W);
+        wrapper.style.height = h + 'px';
+        [bgCanvas, mainCanvas, previewCanvas].forEach(c => {
+            c.style.width  = w + 'px';
+            c.style.height = h + 'px';
+            c.style.top    = '0';
+            c.style.left   = '0';
+        });
+    } else {
+        // Desktop: restore natural canvas CSS size (internal resolution, scrollable)
+        wrapper.style.height = '';
+        [bgCanvas, mainCanvas, previewCanvas].forEach(c => {
+            c.style.width  = CANVAS_W + 'px';
+            c.style.height = CANVAS_H + 'px';
+            c.style.top    = '20px';
+            c.style.left   = '20px';
+        });
+    }
 }
 
-fitCanvasToMobile();
-window.addEventListener('resize', fitCanvasToMobile);
+fitCanvas();
+window.addEventListener('resize', fitCanvas);
