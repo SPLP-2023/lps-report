@@ -368,28 +368,31 @@
         </div>
     </div>
 
-    <div style="height:80px;"></div>
-<div class="section" id="drawingSection">
-            <div class="section-header" onclick="toggleSection('drawingSection')" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,#0d1b2a 0%,#0877c3 100%);border-radius:8px;cursor:pointer;color:white;border:none;width:100%;">
+     <!-- ══ Site Drawing Section ══ -->
+        <div class="section">
+            <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,#0d1b2a 0%,#0877c3 100%);border-radius:8px 8px 0 0;cursor:default;color:white;width:100%;border:none;">
                 <span style="font-weight:700;font-size:1.05em;">📐 Site Drawing</span>
-                <span id="drawingChevron" style="font-size:1.1em;">▼</span>
             </div>
-            <div id="drawingBody" style="padding:16px;background:#f8f9fa;border:1px solid rgba(8,119,195,0.15);border-top:none;border-radius:0 0 8px 8px;">
-                <!-- No drawing saved yet -->
+            <div style="padding:16px;background:#f8f9fa;border:1px solid rgba(8,119,195,0.15);border-top:none;border-radius:0 0 8px 8px;">
+ 
+                <!-- Empty state -->
                 <div id="drawingEmpty" style="text-align:center;padding:20px 0;">
                     <p style="color:#6c757d;margin-bottom:14px;font-size:14px;">No drawing added yet. Open the drawing tool to create a site plan.</p>
-                    <button onclick="openDrawingTool()" style="background:linear-gradient(135deg,#0877c3,#0d1b2a);color:white;border:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">
+                    <button type="button" onclick="openDrawingTool()" style="background:linear-gradient(135deg,#0877c3,#0d1b2a);color:white;border:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">
                         📐 Open Drawing Tool
                     </button>
                 </div>
-                <!-- Drawing preview (shown when drawing saved) -->
+ 
+                <!-- Preview state (shown when drawing saved) -->
                 <div id="drawingPreview" style="display:none;">
-                    <img id="drawingThumb" src="" alt="Site drawing preview" style="width:100%;max-width:600px;display:block;margin:0 auto;border:1px solid #dee2e6;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                    <div style="display:flex;gap:10px;margin-top:12px;justify-content:center;flex-wrap:wrap;">
-                        <button onclick="openDrawingTool()" style="background:#0877c3;color:white;border:none;padding:10px 22px;border-radius:6px;font-size:14px;cursor:pointer;">✏️ Edit Drawing</button>
-                        <button onclick="removeDrawing()" style="background:#e74c3c;color:white;border:none;padding:10px 22px;border-radius:6px;font-size:14px;cursor:pointer;">🗑 Remove Drawing</button>
+                    <img id="drawingThumb" src="" alt="Site drawing preview"
+                        style="width:100%;max-width:600px;display:block;margin:0 auto 12px;border:1px solid #dee2e6;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                        <button type="button" onclick="openDrawingTool()" style="background:#0877c3;color:white;border:none;padding:10px 22px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">✏️ Edit Drawing</button>
+                        <button type="button" onclick="removeDrawing()" style="background:#e74c3c;color:white;border:none;padding:10px 22px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">🗑 Remove Drawing</button>
                     </div>
                 </div>
+ 
             </div>
         </div>
     
