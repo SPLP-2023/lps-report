@@ -256,7 +256,19 @@ body {
 #mainCanvas  { z-index: 2; background: transparent; }
 #previewCanvas { z-index: 3; background: transparent; cursor: crosshair; }
 
-/* Edit BG warning button */
+/* Used/disabled state for single-use tools like Entrance */
+.tool-btn.tool-used {
+    opacity: 0.45;
+    border-color: rgba(255,255,255,0.15) !important;
+    background: rgba(255,255,255,0.04) !important;
+    box-shadow: none !important;
+}
+.mob-btn.tool-used {
+    opacity: 0.45;
+    background: rgba(255,255,255,0.04) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
 .btn-warning {
     background: #e67e22 !important;
     color: white !important;
