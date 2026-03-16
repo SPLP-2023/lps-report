@@ -787,7 +787,6 @@ function drawBondSymbol(ctx, x, y, label) {
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(label, x, y - r - 6);
 }
-}
 
 // ── Redraw main canvas ─────────────────────────────────
 function redrawMain() {
