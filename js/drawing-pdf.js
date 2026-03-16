@@ -357,7 +357,7 @@ function saveDrawingToReport() {
 
         const REPORT_URLS = {
             survey:   'survey.html',
-            ti:       't&i-report.html',
+            ti:       'ti-report.html',
             remedial: 'remedial-report.html'
         };
         window.location.href = REPORT_URLS[reportMode] || 'reports.html';
