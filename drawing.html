@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Site Drawing — Strike Tools</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/drawing.css">
+</head>
+<body>
+
+<!-- Nav Header -->
+<div class="nav-header" id="appNavHeader">
+    <button class="nav-button back-button" onclick="history.back()">← Back</button>
+    <span class="page-title" style="font-size:1.1em;color:#2c3e50;font-weight:700;">Site Drawing Tool</span>
+    <button class="nav-button" id="btnExportPDF" onclick="exportDrawingPDF()">⬇ Export PDF</button>
+</div>
+
+<!-- Main Layout -->
+<div class="drawing-app">
+
+    <!-- LEFT: Toolbar -->
+    <div class="toolbar" id="toolbar">
+        <div class="toolbar-section-label">DRAW</div>
+
+        <button class="tool-btn active" id="tool-freehand" title="Freehand Pen" onclick="setTool('freehand')">
+            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            <span>Pen</span>
+        </button>
+
+        <button class="tool-btn" id="tool-line" title="Straight Line" onclick="setTool('line')">
+            <svg viewBox="0 0 24 24"><line x1="4" y1="20" x2="20" y2="4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            <span>Line</span>
+        </button>
+
+        <!-- Line Style -->
+        <div class="sub-options" id="line-style-opts">
+            <div class="sub-label">Style</div>
+            <button class="style-btn active" id="style-solid" onclick="setLineStyle('solid')" title="Solid line">
+                <svg viewBox="0 0 40 10"><line x1="2" y1="5" x2="38" y2="5" stroke="currentColor" stroke-width="2.5"/></svg>
+            </button>
+            <button class="style-btn" id="style-dashed" onclick="setLineStyle('dashed')" title="Dashed (conductor)">
+                <svg viewBox="0 0 40 10"><line x1="2" y1="5" x2="38" y2="5" stroke="#e74c3c" stroke-width="2.5" stroke-dasharray="6,4"/></svg>
+            </button>
+            <div class="sub-label" style="margin-top:6px;">Colour</div>
+            <div class="colour-row">
+                <button class="colour-swatch active" style="background:#222;" data-colour="#222" onclick="setColour(this)" title="Black"></button>
+                <button class="colour-swatch" style="background:#e74c3c;" data-colour="#e74c3c" onclick="setColour(this)" title="Red"></button>
+                <button class="colour-swatch" style="background:#2980b9;" data-colour="#2980b9" onclick="setColour(this)" title="Blue"></button>
+                <button class="colour-swatch" style="background:#27ae60;" data-colour="#27ae60" onclick="setColour(this)" title="Green"></button>
+                <button class="colour-swatch" style="background:#f39c12;" data-colour="#f39c12" onclick="setColour(this)" title="Orange"></button>
+                <button class="colour-swatch colour-custom" id="customColourBtn" title="Custom colour">
+                    <input type="color" id="customColourPicker" value="#8e44ad" onchange="setCustomColour(this.value)">
+                    <span>+</span>
+                </button>
+            </div>
+            <div class="sub-label" style="margin-top:6px;">Width</div>
+            <input type="range" id="lineWidth" min="1" max="10" value="2" oninput="setLineWidth(this.value)" style="width:100%;">
+            <div style="text-align:center;font-size:11px;color:#888;" id="lineWidthLabel">2px</div>
+        </div>
+
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-section-label">SHAPES</div>
+
+        <button class="tool-btn" id="tool-rect" title="Rectangle" onclick="setTool('rect')">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <span>Rect</span>
+        </button>
+        <button class="tool-btn" id="tool-circle" title="Circle" onclick="setTool('circle')">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <span>Circle</span>
+        </button>
+        <button class="tool-btn" id="tool-triangle" title="Triangle" onclick="setTool('triangle')">
+            <svg viewBox="0 0 24 24"><polygon points="12,3 22,21 2,21" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <span>Triangle</span>
+        </button>
+
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-section-label">SYMBOLS</div>
+
+        <!-- Earth Tool -->
+        <button class="tool-btn" id="tool-earth" title="Place Earth" onclick="setTool('earth')">
+            <svg viewBox="0 0 24 24" class="symbol-svg">
+                <line x1="12" y1="4" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2"/>
+                <line x1="6" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="2"/>
+                <line x1="9" y1="18" x2="15" y2="18" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <span>Earth</span>
+        </button>
+
+        <!-- Earth type toggle -->
+        <div class="sub-options" id="earth-type-opts">
+            <div class="sub-label">Type</div>
+            <div class="toggle-pair">
+                <button class="toggle-opt active" id="earthTypeStd" onclick="setEarthType('standard')">E (Standard)</button>
+                <button class="toggle-opt" id="earthTypeEQ" onclick="setEarthType('eq')">EQ (Protective)</button>
+            </div>
+        </div>
+
+        <button class="tool-btn" id="tool-mdb" title="Main Distribution Board" onclick="setTool('mdb')">
+            <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><text x="12" y="15" text-anchor="middle" font-size="7" font-weight="bold" fill="currentColor">MDB</text></svg>
+            <span>MDB</span>
+        </button>
+
+        <button class="tool-btn" id="tool-bond" title="Bond Point" onclick="setTool('bond')">
+            <svg viewBox="0 0 24 24"><text x="12" y="17" text-anchor="middle" font-size="16" fill="currentColor">⊷</text></svg>
+            <span>Bond</span>
+        </button>
+
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-section-label">EDIT</div>
+
+        <button class="tool-btn" id="tool-select" title="Select / Move" onclick="setTool('select')">
+            <svg viewBox="0 0 24 24"><path d="M4 4l7 18 3-7 7-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span>Select</span>
+        </button>
+
+        <button class="tool-btn" id="tool-eraser" title="Eraser" onclick="setTool('eraser')">
+            <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16l11-11 6 6-2.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><line x1="6" y1="14" x2="10" y2="18" stroke="currentColor" stroke-width="2"/></svg>
+            <span>Eraser</span>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <button class="tool-btn action-btn" onclick="undo()" title="Undo">
+            <svg viewBox="0 0 24 24"><path d="M3 10h10c4 0 7 3 7 7s-3 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="3,6 3,10 7,10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <span>Undo</span>
+        </button>
+        <button class="tool-btn action-btn" onclick="redo()" title="Redo">
+            <svg viewBox="0 0 24 24"><path d="M21 10H11C7 10 4 13 4 17s3 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="21,6 21,10 17,10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <span>Redo</span>
+        </button>
+        <button class="tool-btn action-btn danger-btn" onclick="clearCanvas()" title="Clear All">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            <span>Clear</span>
+        </button>
+    </div>
+
+    <!-- CENTRE: Canvas Area -->
+    <div class="canvas-area" id="canvasArea">
+
+        <!-- Canvas Controls Bar -->
+        <div class="canvas-controls">
+            <label class="ctrl-item">
+                <span>Background</span>
+                <button class="small-btn" onclick="document.getElementById('bgUpload').click()">📷 Upload</button>
+                <input type="file" id="bgUpload" accept="image/*" style="display:none" onchange="loadBackground(this)">
+                <button class="small-btn danger" onclick="clearBackground()" id="btnClearBg" style="display:none">✕ Remove</button>
+            </label>
+            <label class="ctrl-item" id="opacityCtrl" style="display:none">
+                <span>Opacity</span>
+                <input type="range" id="bgOpacity" min="5" max="100" value="40" oninput="setBgOpacity(this.value)">
+                <span id="bgOpacityLabel">40%</span>
+            </label>
+            <label class="ctrl-item">
+                <input type="checkbox" id="chkGrid" onchange="toggleGrid(this.checked)">
+                <span>Grid</span>
+            </label>
+            <label class="ctrl-item">
+                <input type="checkbox" id="chkSnap" onchange="toggleSnap(this.checked)">
+                <span>Snap</span>
+            </label>
+            <label class="ctrl-item">
+                <span>Grid Size</span>
+                <select id="gridSize" onchange="setGridSize(this.value)" style="padding:2px 6px;font-size:12px;border-radius:4px;border:1px solid #ccc;">
+                    <option value="20">20px</option>
+                    <option value="25" selected>25px</option>
+                    <option value="50">50px</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- The canvas wrapper (scrollable) -->
+        <div class="canvas-wrapper" id="canvasWrapper">
+            <canvas id="bgCanvas"></canvas>
+            <canvas id="mainCanvas"></canvas>
+            <canvas id="previewCanvas"></canvas>
+        </div>
+
+        <!-- Delete selected overlay -->
+        <div class="delete-overlay" id="deleteOverlay" style="display:none;">
+            <button class="delete-btn" onclick="deleteSelected()">🗑 Delete Selected</button>
+            <button class="delete-btn secondary" onclick="deselectAll()">✕ Deselect</button>
+        </div>
+    </div>
+
+    <!-- RIGHT: Info Panel -->
+    <div class="info-panel" id="infoPanel">
+
+        <div class="panel-section">
+            <div class="panel-heading">Site Details</div>
+            <div class="panel-field">
+                <label>Site Name</label>
+                <input type="text" id="infoSiteName" placeholder="Site name...">
+            </div>
+            <div class="panel-field">
+                <label>Address</label>
+                <textarea id="infoAddress" rows="3" placeholder="Site address..."></textarea>
+            </div>
+            <div class="panel-field">
+                <label>Drawn By (initials)</label>
+                <input type="text" id="infoDrawnBy" placeholder="e.g. JD" maxlength="6">
+            </div>
+            <div class="panel-field">
+                <label>Date</label>
+                <input type="date" id="infoDate">
+            </div>
+            <div class="panel-field">
+                <label>Scale</label>
+                <input type="text" id="infoScale" value="NOT TO SCALE" readonly style="background:#f0f0f0;color:#888;">
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div class="panel-heading">Legend <span style="font-size:10px;font-weight:400;color:#aaa;">(auto-generated)</span></div>
+            <div id="legendList" class="legend-list">
+                <div class="legend-empty">Add elements to the canvas to build the legend.</div>
+            </div>
+            <!-- Custom legend entry for coloured lines -->
+            <div id="colourLegendEntries"></div>
+        </div>
+
+        <div class="panel-section">
+            <div class="panel-heading">Earth Counter</div>
+            <div class="earth-counter">
+                <div>Next: <strong id="nextEarthLabel">E1</strong></div>
+                <div style="margin-top:4px;font-size:12px;color:#888;">Total placed: <span id="earthCountDisplay">0</span></div>
+                <button class="small-btn danger" style="margin-top:8px;width:100%;" onclick="resetEarthCounter()">Reset Counter</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/drawing.js"></script>
+<script src="js/drawing-pdf.js"></script>
+
+<script>
+    // Set today's date default
+    document.getElementById('infoDate').valueAsDate = new Date();
+
+    // Restore initials from localStorage
+    const saved = localStorage.getItem('drawnByInitials');
+    if (saved) document.getElementById('infoDrawnBy').value = saved;
+    document.getElementById('infoDrawnBy').addEventListener('input', function() {
+        localStorage.setItem('drawnByInitials', this.value);
+    });
+</script>
+</body>
+</html>
