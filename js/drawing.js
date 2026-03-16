@@ -30,6 +30,7 @@ let showGrid      = false;
 let gridSize      = 25;
 let bgImage       = null;
 let bgOpacity     = 0.4;
+let bgLocked      = true;   // locked by default — drawing works over bg
 
 // Background image transform state
 let bgX = 0, bgY = 0;
@@ -42,6 +43,13 @@ let bgDragOriginX = 0, bgDragOriginY = 0;
 let bgResizeStartX = 0, bgResizeStartY = 0;
 let bgResizeOriginW = 0, bgResizeOriginH = 0;
 const BG_HANDLE = 18;
+
+// Pinch-to-zoom state (mobile bg editing)
+let pinchActive       = false;
+let pinchStartDist    = 0;
+let pinchStartAngle   = 0;
+let pinchStartW       = 0;
+let pinchStartRotation = 0;
 
 // Drawing state
 let isDrawing     = false;
@@ -72,7 +80,6 @@ function drawGrid() {
     bgCtx.fillStyle = '#ffffff';
     bgCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // Draw background image at its own position/size/rotation
     if (bgImage) {
         bgCtx.save();
         bgCtx.globalAlpha = bgOpacity;
@@ -84,34 +91,48 @@ function drawGrid() {
         bgCtx.restore();
         bgCtx.globalAlpha = 1;
 
-        // Draw dashed border + handles when image is loaded
-        bgCtx.save();
-        bgCtx.translate(bgX + bgW / 2, bgY + bgH / 2);
-        bgCtx.rotate(bgRotation * Math.PI / 180);
-        bgCtx.strokeStyle = 'rgba(8,119,195,0.6)';
-        bgCtx.lineWidth = 1.5;
-        bgCtx.setLineDash([6, 4]);
-        bgCtx.strokeRect(-bgW / 2, -bgH / 2, bgW, bgH);
-        bgCtx.setLineDash([]);
+        // Only show edit handles when unlocked
+        if (!bgLocked) {
+            bgCtx.save();
+            bgCtx.translate(bgX + bgW / 2, bgY + bgH / 2);
+            bgCtx.rotate(bgRotation * Math.PI / 180);
 
-        // Resize handle (bottom-right)
-        const hx = bgW / 2 - BG_HANDLE / 2;
-        const hy = bgH / 2 - BG_HANDLE / 2;
-        bgCtx.fillStyle = '#0877c3';
-        bgCtx.fillRect(hx, hy, BG_HANDLE, BG_HANDLE);
-        bgCtx.strokeStyle = 'white';
-        bgCtx.lineWidth = 1.5;
-        bgCtx.strokeRect(hx, hy, BG_HANDLE, BG_HANDLE);
+            // Dashed border
+            bgCtx.strokeStyle = '#0877c3';
+            bgCtx.lineWidth = 2;
+            bgCtx.setLineDash([8, 5]);
+            bgCtx.strokeRect(-bgW / 2, -bgH / 2, bgW, bgH);
+            bgCtx.setLineDash([]);
 
-        // Move handle indicator (centre)
-        bgCtx.fillStyle = 'rgba(8,119,195,0.25)';
-        bgCtx.beginPath();
-        bgCtx.arc(0, 0, 10, 0, Math.PI * 2);
-        bgCtx.fill();
-        bgCtx.restore();
+            // Resize handle — bottom-right corner
+            const hx = bgW / 2 - BG_HANDLE;
+            const hy = bgH / 2 - BG_HANDLE;
+            bgCtx.fillStyle = '#0877c3';
+            bgCtx.fillRect(hx, hy, BG_HANDLE, BG_HANDLE);
+            bgCtx.strokeStyle = 'white';
+            bgCtx.lineWidth = 1.5;
+            bgCtx.strokeRect(hx, hy, BG_HANDLE, BG_HANDLE);
+            // Arrow icon in handle
+            bgCtx.fillStyle = 'white';
+            bgCtx.font = 'bold 11px Arial';
+            bgCtx.textAlign = 'center';
+            bgCtx.textBaseline = 'middle';
+            bgCtx.fillText('⤡', hx + BG_HANDLE / 2, hy + BG_HANDLE / 2);
+
+            // Move indicator at centre
+            bgCtx.fillStyle = 'rgba(8,119,195,0.3)';
+            bgCtx.beginPath();
+            bgCtx.arc(0, 0, 14, 0, Math.PI * 2);
+            bgCtx.fill();
+            bgCtx.fillStyle = 'white';
+            bgCtx.font = '14px Arial';
+            bgCtx.fillText('✥', 0, 0);
+
+            bgCtx.restore();
+        }
     }
 
-    // Grid lines
+    // Grid — only shown on screen, never in PDF
     if (showGrid) {
         bgCtx.strokeStyle = 'rgba(8,119,195,0.12)';
         bgCtx.lineWidth = 0.5;
@@ -154,17 +175,19 @@ function loadBackground(input) {
         const img = new Image();
         img.onload = () => {
             bgImage = img;
-            // Fit image to canvas width, maintain aspect ratio, centre it
             const scale = Math.min(CANVAS_W * 0.8 / img.width, CANVAS_H * 0.8 / img.height, 1);
             bgW = img.width  * scale;
             bgH = img.height * scale;
             bgX = (CANVAS_W - bgW) / 2;
             bgY = (CANVAS_H - bgH) / 2;
             bgRotation = 0;
+            // Lock immediately after upload
+            bgLocked = true;
+            updateBgLockUI();
             drawGrid();
-            document.getElementById('opacityCtrl').style.display = 'flex';
-            document.getElementById('btnClearBg').style.display = 'inline-block';
-            document.getElementById('bgRotateControls').style.display = 'flex';
+            document.getElementById('opacityCtrl').style.display    = 'flex';
+            document.getElementById('btnClearBg').style.display     = 'inline-block';
+            document.getElementById('bgEditControls').style.display = 'flex';
         };
         img.src = e.target.result;
     };
@@ -174,9 +197,11 @@ function loadBackground(input) {
 function clearBackground() {
     bgImage = null;
     bgX = bgY = bgW = bgH = bgRotation = 0;
+    bgLocked = true;
     drawGrid();
-    document.getElementById('opacityCtrl').style.display = 'none';
-    document.getElementById('btnClearBg').style.display = 'none';
+    document.getElementById('opacityCtrl').style.display    = 'none';
+    document.getElementById('btnClearBg').style.display     = 'none';
+    document.getElementById('bgEditControls').style.display = 'none';
     document.getElementById('bgRotateControls').style.display = 'none';
     document.getElementById('bgUpload').value = '';
 }
@@ -188,8 +213,30 @@ function setBgOpacity(val) {
 }
 
 function rotateBg(deg) {
+    if (bgLocked) return;
     bgRotation = (bgRotation + deg) % 360;
     drawGrid();
+}
+
+function toggleBgLock() {
+    bgLocked = !bgLocked;
+    updateBgLockUI();
+    drawGrid();
+}
+
+function updateBgLockUI() {
+    const btn = document.getElementById('btnBgLock');
+    if (!btn) return;
+    if (bgLocked) {
+        btn.textContent = '🔓 Edit BG';
+        btn.classList.remove('btn-warning');
+        btn.classList.add('small-btn');
+        document.getElementById('bgRotateControls').style.display = 'none';
+    } else {
+        btn.textContent = '🔒 Lock BG';
+        btn.classList.add('btn-warning');
+        document.getElementById('bgRotateControls').style.display = 'flex';
+    }
 }
 
 // ── Background image hit testing ───────────────────────
@@ -307,109 +354,136 @@ function getPos(e) {
         clientY = e.clientY;
     }
     return {
-        x: snap((clientX - rect.left) * scaleX),
-        y: snap((clientY - rect.top)  * scaleY),
-        // raw unsnapped for bg manipulation
+        x:  snap((clientX - rect.left) * scaleX),
+        y:  snap((clientY - rect.top)  * scaleY),
         rx: (clientX - rect.left) * scaleX,
         ry: (clientY - rect.top)  * scaleY
     };
 }
 
-// Two-finger pan state
-let twoFingerPanning = false;
-let panLastX = 0, panLastY = 0;
-const wrapper = document.getElementById('canvasWrapper');
+function getTouchCanvasPos(touch) {
+    const rect = previewCanvas.getBoundingClientRect();
+    return {
+        rx: (touch.clientX - rect.left) * (CANVAS_W / rect.width),
+        ry: (touch.clientY - rect.top)  * (CANVAS_H / rect.height)
+    };
+}
+
+function pinchDist(t0, t1) {
+    const dx = t1.clientX - t0.clientX;
+    const dy = t1.clientY - t0.clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+}
+
+function pinchAngle(t0, t1) {
+    return Math.atan2(t1.clientY - t0.clientY, t1.clientX - t0.clientX) * 180 / Math.PI;
+}
 
 // ── Pointer events ─────────────────────────────────────
+const wrapper = document.getElementById('canvasWrapper');
+
 previewCanvas.addEventListener('mousedown',  onPointerDown);
 previewCanvas.addEventListener('mousemove',  onPointerMove);
 previewCanvas.addEventListener('mouseup',    onPointerUp);
 previewCanvas.addEventListener('mouseleave', onPointerUp);
+
 previewCanvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+
     if (e.touches.length === 2) {
-        e.preventDefault();
-        twoFingerPanning = true;
-        panLastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        panLastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        if (!bgLocked && bgImage) {
+            // Pinch to resize/rotate bg
+            pinchActive       = true;
+            pinchStartDist    = pinchDist(e.touches[0], e.touches[1]);
+            pinchStartAngle   = pinchAngle(e.touches[0], e.touches[1]);
+            pinchStartW       = bgW;
+            pinchStartRotation = bgRotation;
+        } else {
+            // Two-finger pan (locked bg or no bg)
+            twoFingerPanning = true;
+            panLastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            panLastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        }
         return;
     }
-    e.preventDefault();
     onPointerDown(e);
 }, { passive: false });
 
 previewCanvas.addEventListener('touchmove', e => {
-    if (e.touches.length === 2 && twoFingerPanning) {
-        e.preventDefault();
-        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        wrapper.scrollLeft -= (mx - panLastX);
-        wrapper.scrollTop  -= (my - panLastY);
-        panLastX = mx;
-        panLastY = my;
+    e.preventDefault();
+
+    if (e.touches.length === 2) {
+        if (pinchActive && !bgLocked && bgImage) {
+            const dist  = pinchDist(e.touches[0], e.touches[1]);
+            const angle = pinchAngle(e.touches[0], e.touches[1]);
+            const scale = dist / pinchStartDist;
+            const ratio = bgH / bgW;
+            bgW = Math.max(50, pinchStartW * scale);
+            bgH = bgW * ratio;
+            bgRotation = pinchStartRotation + (angle - pinchStartAngle);
+            drawGrid();
+        } else if (twoFingerPanning) {
+            const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            wrapper.scrollLeft -= (mx - panLastX);
+            wrapper.scrollTop  -= (my - panLastY);
+            panLastX = mx;
+            panLastY = my;
+        }
         return;
     }
-    e.preventDefault();
     onPointerMove(e);
 }, { passive: false });
 
 previewCanvas.addEventListener('touchend', e => {
-    if (twoFingerPanning) {
-        twoFingerPanning = false;
-        return;
-    }
     e.preventDefault();
+    if (pinchActive) { pinchActive = false; return; }
+    if (twoFingerPanning) { twoFingerPanning = false; return; }
     onPointerUp(e);
 }, { passive: false });
 
+let twoFingerPanning = false;
+let panLastX = 0, panLastY = 0;
+
 function onPointerDown(e) {
-    if (e.touches && e.touches.length === 2) return; // handled above
+    if (e.touches && e.touches.length === 2) return;
     const pos = getPos(e);
 
-    // Check bg image interactions first (raw pos, no snap)
-    if (bgImage && isOnBgHandle(pos.rx, pos.ry)) {
-        bgResizing = true;
-        bgResizeStartX = pos.rx;
-        bgResizeStartY = pos.ry;
-        bgResizeOriginW = bgW;
-        bgResizeOriginH = bgH;
-        return;
-    }
-    if (bgImage && isOnBgImage(pos.rx, pos.ry)) {
-        bgDragging = true;
-        bgDragStartX  = pos.rx;
-        bgDragStartY  = pos.ry;
-        bgDragOriginX = bgX;
-        bgDragOriginY = bgY;
-        return;
+    // BG interactions only allowed when unlocked
+    if (!bgLocked && bgImage) {
+        if (isOnBgHandle(pos.rx, pos.ry)) {
+            bgResizing = true;
+            bgResizeStartX  = pos.rx;
+            bgResizeStartY  = pos.ry;
+            bgResizeOriginW = bgW;
+            bgResizeOriginH = bgH;
+            return;
+        }
+        if (isOnBgImage(pos.rx, pos.ry)) {
+            bgDragging    = true;
+            bgDragStartX  = pos.rx;
+            bgDragStartY  = pos.ry;
+            bgDragOriginX = bgX;
+            bgDragOriginY = bgY;
+            return;
+        }
     }
 
-    if (currentTool === 'select') {
-        handleSelect(pos.x, pos.y);
-        return;
-    }
-    if (currentTool === 'eraser') {
-        handleErase(pos.x, pos.y);
-        return;
-    }
-    if (['earth', 'mdb', 'bond'].includes(currentTool)) {
-        placeSymbol(pos.x, pos.y);
-        return;
-    }
+    // Normal drawing tools (always work when bg is locked)
+    if (currentTool === 'select') { handleSelect(pos.x, pos.y); return; }
+    if (currentTool === 'eraser') { handleErase(pos.x, pos.y);  return; }
+    if (['earth', 'mdb', 'bond'].includes(currentTool)) { placeSymbol(pos.x, pos.y); return; }
 
     isDrawing = true;
     startX = pos.x;
     startY = pos.y;
-
-    if (currentTool === 'freehand') {
-        currentPath = [{ x: pos.x, y: pos.y }];
-    }
+    if (currentTool === 'freehand') currentPath = [{ x: pos.x, y: pos.y }];
 }
 
 function onPointerMove(e) {
     const pos = getPos(e);
 
-    // BG resize
-    if (bgResizing) {
+    if (bgResizing && !bgLocked) {
         const dx = pos.rx - bgResizeStartX;
         const ratio = bgResizeOriginH / bgResizeOriginW;
         bgW = Math.max(50, bgResizeOriginW + dx);
@@ -417,8 +491,7 @@ function onPointerMove(e) {
         drawGrid();
         return;
     }
-    // BG drag
-    if (bgDragging) {
+    if (bgDragging && !bgLocked) {
         bgX = bgDragOriginX + (pos.rx - bgDragStartX);
         bgY = bgDragOriginY + (pos.ry - bgDragStartY);
         drawGrid();
@@ -427,7 +500,6 @@ function onPointerMove(e) {
 
     if (!isDrawing) return;
     previewCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-
     if (currentTool === 'freehand') {
         currentPath.push({ x: pos.x, y: pos.y });
         drawFreehandPreview();
@@ -442,7 +514,6 @@ function onPointerUp(e) {
         bgDragging = false;
         return;
     }
-
     if (!isDrawing) return;
     isDrawing = false;
     previewCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
@@ -450,34 +521,21 @@ function onPointerUp(e) {
     const pos = getPos(e);
 
     if (currentTool === 'freehand' && currentPath.length > 1) {
-        commitElement({
-            type: 'freehand',
-            path: [...currentPath],
-            colour: lineStyle === 'dashed' ? '#e74c3c' : currentColour,
-            dashed: lineStyle === 'dashed',
-            width: lineWidth
-        });
+        commitElement({ type:'freehand', path:[...currentPath],
+            colour: lineStyle==='dashed' ? '#e74c3c' : currentColour,
+            dashed: lineStyle==='dashed', width: lineWidth });
         currentPath = [];
     } else if (currentTool === 'line') {
-        if (Math.abs(pos.x - startX) > 2 || Math.abs(pos.y - startY) > 2) {
-            commitElement({
-                type: 'line',
-                x1: startX, y1: startY, x2: pos.x, y2: pos.y,
-                colour: lineStyle === 'dashed' ? '#e74c3c' : currentColour,
-                dashed: lineStyle === 'dashed',
-                width: lineWidth
-            });
+        if (Math.abs(pos.x-startX) > 2 || Math.abs(pos.y-startY) > 2) {
+            commitElement({ type:'line', x1:startX, y1:startY, x2:pos.x, y2:pos.y,
+                colour: lineStyle==='dashed' ? '#e74c3c' : currentColour,
+                dashed: lineStyle==='dashed', width: lineWidth });
         }
-    } else if (['rect', 'circle', 'triangle'].includes(currentTool)) {
-        const w = pos.x - startX;
-        const h = pos.y - startY;
+    } else if (['rect','circle','triangle'].includes(currentTool)) {
+        const w = pos.x - startX, h = pos.y - startY;
         if (Math.abs(w) > 3 && Math.abs(h) > 3) {
-            commitElement({
-                type: currentTool,
-                x: startX, y: startY, w, h,
-                colour: currentColour,
-                width: lineWidth
-            });
+            commitElement({ type:currentTool, x:startX, y:startY, w, h,
+                colour:currentColour, width:lineWidth });
         }
     }
     undoStack = [];
@@ -1010,14 +1068,15 @@ function legendRowCustom(colour, labelVal) {
 
 // ── Expose canvas for PDF export ───────────────────────
 window.getDrawingCanvas = function() {
-    // Composite: bg + main onto a new canvas
+    // PDF output: white canvas + drawing elements only
+    // Background image and grid are intentionally excluded
     const out = document.createElement('canvas');
     out.width  = CANVAS_W;
     out.height = CANVAS_H;
     const ctx = out.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-    ctx.drawImage(bgCanvas, 0, 0);
+    // Only draw the main elements layer — no bgCanvas
     ctx.drawImage(mainCanvas, 0, 0);
     return out;
 };
@@ -1062,5 +1121,27 @@ function buildLegendData() {
 // ── Init ───────────────────────────────────────────────
 drawGrid();
 setTool('freehand');
-// Hide sub-options initially
 document.getElementById('earth-type-opts').style.display = 'none';
+// Start with bg locked state shown correctly
+updateBgLockUI();
+
+// ── Mobile canvas scaling ───────────────────────────────
+// On mobile the CSS sets canvas width:100%, height:auto
+// We need the wrapper height to match the aspect ratio so nothing is clipped
+function fitCanvasToMobile() {
+    if (window.innerWidth > 768) return;
+    const wrapper    = document.getElementById('canvasWrapper');
+    const canvasArea = document.getElementById('canvasArea');
+    const aspect     = CANVAS_H / CANVAS_W;
+    const w          = canvasArea.clientWidth;
+    const h          = w * aspect;
+    wrapper.style.height = h + 'px';
+    // All three canvases display at same CSS size
+    [bgCanvas, mainCanvas, previewCanvas].forEach(c => {
+        c.style.width  = w + 'px';
+        c.style.height = h + 'px';
+    });
+}
+
+fitCanvasToMobile();
+window.addEventListener('resize', fitCanvasToMobile);
