@@ -31,6 +31,18 @@ let gridSize      = 25;
 let bgImage       = null;
 let bgOpacity     = 0.4;
 
+// Background image transform state
+let bgX = 0, bgY = 0;
+let bgW = 0, bgH = 0;
+let bgRotation = 0;
+let bgDragging = false;
+let bgResizing = false;
+let bgDragStartX = 0, bgDragStartY = 0;
+let bgDragOriginX = 0, bgDragOriginY = 0;
+let bgResizeStartX = 0, bgResizeStartY = 0;
+let bgResizeOriginW = 0, bgResizeOriginH = 0;
+const BG_HANDLE = 18;
+
 // Drawing state
 let isDrawing     = false;
 let startX = 0, startY = 0;
@@ -54,18 +66,51 @@ function resizeCanvasWrapper() {
     // Canvases are fixed size; wrapper scrolls
 }
 
-// ── Grid ───────────────────────────────────────────────
+// ── Grid & background render ────────────────────────────
 function drawGrid() {
     bgCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-    // Background fill
     bgCtx.fillStyle = '#ffffff';
     bgCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-    // Draw background image if loaded
+
+    // Draw background image at its own position/size/rotation
     if (bgImage) {
+        bgCtx.save();
         bgCtx.globalAlpha = bgOpacity;
-        bgCtx.drawImage(bgImage, 0, 0, CANVAS_W, CANVAS_H);
+        const cx = bgX + bgW / 2;
+        const cy = bgY + bgH / 2;
+        bgCtx.translate(cx, cy);
+        bgCtx.rotate(bgRotation * Math.PI / 180);
+        bgCtx.drawImage(bgImage, -bgW / 2, -bgH / 2, bgW, bgH);
+        bgCtx.restore();
         bgCtx.globalAlpha = 1;
+
+        // Draw dashed border + handles when image is loaded
+        bgCtx.save();
+        bgCtx.translate(bgX + bgW / 2, bgY + bgH / 2);
+        bgCtx.rotate(bgRotation * Math.PI / 180);
+        bgCtx.strokeStyle = 'rgba(8,119,195,0.6)';
+        bgCtx.lineWidth = 1.5;
+        bgCtx.setLineDash([6, 4]);
+        bgCtx.strokeRect(-bgW / 2, -bgH / 2, bgW, bgH);
+        bgCtx.setLineDash([]);
+
+        // Resize handle (bottom-right)
+        const hx = bgW / 2 - BG_HANDLE / 2;
+        const hy = bgH / 2 - BG_HANDLE / 2;
+        bgCtx.fillStyle = '#0877c3';
+        bgCtx.fillRect(hx, hy, BG_HANDLE, BG_HANDLE);
+        bgCtx.strokeStyle = 'white';
+        bgCtx.lineWidth = 1.5;
+        bgCtx.strokeRect(hx, hy, BG_HANDLE, BG_HANDLE);
+
+        // Move handle indicator (centre)
+        bgCtx.fillStyle = 'rgba(8,119,195,0.25)';
+        bgCtx.beginPath();
+        bgCtx.arc(0, 0, 10, 0, Math.PI * 2);
+        bgCtx.fill();
+        bgCtx.restore();
     }
+
     // Grid lines
     if (showGrid) {
         bgCtx.strokeStyle = 'rgba(8,119,195,0.12)';
@@ -109,9 +154,17 @@ function loadBackground(input) {
         const img = new Image();
         img.onload = () => {
             bgImage = img;
+            // Fit image to canvas width, maintain aspect ratio, centre it
+            const scale = Math.min(CANVAS_W * 0.8 / img.width, CANVAS_H * 0.8 / img.height, 1);
+            bgW = img.width  * scale;
+            bgH = img.height * scale;
+            bgX = (CANVAS_W - bgW) / 2;
+            bgY = (CANVAS_H - bgH) / 2;
+            bgRotation = 0;
             drawGrid();
             document.getElementById('opacityCtrl').style.display = 'flex';
             document.getElementById('btnClearBg').style.display = 'inline-block';
+            document.getElementById('bgRotateControls').style.display = 'flex';
         };
         img.src = e.target.result;
     };
@@ -120,9 +173,11 @@ function loadBackground(input) {
 
 function clearBackground() {
     bgImage = null;
+    bgX = bgY = bgW = bgH = bgRotation = 0;
     drawGrid();
     document.getElementById('opacityCtrl').style.display = 'none';
     document.getElementById('btnClearBg').style.display = 'none';
+    document.getElementById('bgRotateControls').style.display = 'none';
     document.getElementById('bgUpload').value = '';
 }
 
@@ -130,6 +185,43 @@ function setBgOpacity(val) {
     bgOpacity = parseInt(val) / 100;
     document.getElementById('bgOpacityLabel').textContent = val + '%';
     drawGrid();
+}
+
+function rotateBg(deg) {
+    bgRotation = (bgRotation + deg) % 360;
+    drawGrid();
+}
+
+// ── Background image hit testing ───────────────────────
+function getBgResizeHandlePos() {
+    // Returns canvas coords of the resize handle centre (bottom-right of image, rotated)
+    const rad = bgRotation * Math.PI / 180;
+    const cx  = bgX + bgW / 2;
+    const cy  = bgY + bgH / 2;
+    const lx  = bgW / 2 - BG_HANDLE / 2 + BG_HANDLE / 2;
+    const ly  = bgH / 2 - BG_HANDLE / 2 + BG_HANDLE / 2;
+    return {
+        x: cx + lx * Math.cos(rad) - ly * Math.sin(rad),
+        y: cy + lx * Math.sin(rad) + ly * Math.cos(rad)
+    };
+}
+
+function isOnBgHandle(x, y) {
+    if (!bgImage) return false;
+    const h = getBgResizeHandlePos();
+    return Math.hypot(x - h.x, y - h.y) < BG_HANDLE;
+}
+
+function isOnBgImage(x, y) {
+    if (!bgImage) return false;
+    // Transform point into image local space
+    const rad = -bgRotation * Math.PI / 180;
+    const cx = bgX + bgW / 2;
+    const cy = bgY + bgH / 2;
+    const dx = x - cx, dy = y - cy;
+    const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
+    const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
+    return lx >= -bgW / 2 && lx <= bgW / 2 && ly >= -bgH / 2 && ly <= bgH / 2;
 }
 
 // ── Tool selection ─────────────────────────────────────
@@ -216,21 +308,80 @@ function getPos(e) {
     }
     return {
         x: snap((clientX - rect.left) * scaleX),
-        y: snap((clientY - rect.top)  * scaleY)
+        y: snap((clientY - rect.top)  * scaleY),
+        // raw unsnapped for bg manipulation
+        rx: (clientX - rect.left) * scaleX,
+        ry: (clientY - rect.top)  * scaleY
     };
 }
+
+// Two-finger pan state
+let twoFingerPanning = false;
+let panLastX = 0, panLastY = 0;
+const wrapper = document.getElementById('canvasWrapper');
 
 // ── Pointer events ─────────────────────────────────────
 previewCanvas.addEventListener('mousedown',  onPointerDown);
 previewCanvas.addEventListener('mousemove',  onPointerMove);
 previewCanvas.addEventListener('mouseup',    onPointerUp);
 previewCanvas.addEventListener('mouseleave', onPointerUp);
-previewCanvas.addEventListener('touchstart', e => { e.preventDefault(); onPointerDown(e); }, { passive: false });
-previewCanvas.addEventListener('touchmove',  e => { e.preventDefault(); onPointerMove(e); }, { passive: false });
-previewCanvas.addEventListener('touchend',   e => { e.preventDefault(); onPointerUp(e);   }, { passive: false });
+previewCanvas.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        twoFingerPanning = true;
+        panLastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        panLastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        return;
+    }
+    e.preventDefault();
+    onPointerDown(e);
+}, { passive: false });
+
+previewCanvas.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && twoFingerPanning) {
+        e.preventDefault();
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        wrapper.scrollLeft -= (mx - panLastX);
+        wrapper.scrollTop  -= (my - panLastY);
+        panLastX = mx;
+        panLastY = my;
+        return;
+    }
+    e.preventDefault();
+    onPointerMove(e);
+}, { passive: false });
+
+previewCanvas.addEventListener('touchend', e => {
+    if (twoFingerPanning) {
+        twoFingerPanning = false;
+        return;
+    }
+    e.preventDefault();
+    onPointerUp(e);
+}, { passive: false });
 
 function onPointerDown(e) {
+    if (e.touches && e.touches.length === 2) return; // handled above
     const pos = getPos(e);
+
+    // Check bg image interactions first (raw pos, no snap)
+    if (bgImage && isOnBgHandle(pos.rx, pos.ry)) {
+        bgResizing = true;
+        bgResizeStartX = pos.rx;
+        bgResizeStartY = pos.ry;
+        bgResizeOriginW = bgW;
+        bgResizeOriginH = bgH;
+        return;
+    }
+    if (bgImage && isOnBgImage(pos.rx, pos.ry)) {
+        bgDragging = true;
+        bgDragStartX  = pos.rx;
+        bgDragStartY  = pos.ry;
+        bgDragOriginX = bgX;
+        bgDragOriginY = bgY;
+        return;
+    }
 
     if (currentTool === 'select') {
         handleSelect(pos.x, pos.y);
@@ -240,7 +391,6 @@ function onPointerDown(e) {
         handleErase(pos.x, pos.y);
         return;
     }
-    // Stamp tools — place on click
     if (['earth', 'mdb', 'bond'].includes(currentTool)) {
         placeSymbol(pos.x, pos.y);
         return;
@@ -256,8 +406,26 @@ function onPointerDown(e) {
 }
 
 function onPointerMove(e) {
-    if (!isDrawing) return;
     const pos = getPos(e);
+
+    // BG resize
+    if (bgResizing) {
+        const dx = pos.rx - bgResizeStartX;
+        const ratio = bgResizeOriginH / bgResizeOriginW;
+        bgW = Math.max(50, bgResizeOriginW + dx);
+        bgH = bgW * ratio;
+        drawGrid();
+        return;
+    }
+    // BG drag
+    if (bgDragging) {
+        bgX = bgDragOriginX + (pos.rx - bgDragStartX);
+        bgY = bgDragOriginY + (pos.ry - bgDragStartY);
+        drawGrid();
+        return;
+    }
+
+    if (!isDrawing) return;
     previewCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
     if (currentTool === 'freehand') {
@@ -269,6 +437,12 @@ function onPointerMove(e) {
 }
 
 function onPointerUp(e) {
+    if (bgResizing || bgDragging) {
+        bgResizing = false;
+        bgDragging = false;
+        return;
+    }
+
     if (!isDrawing) return;
     isDrawing = false;
     previewCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
@@ -306,7 +480,7 @@ function onPointerUp(e) {
             });
         }
     }
-    undoStack = []; // clear redo on new action
+    undoStack = [];
     updateLegend();
 }
 
@@ -745,20 +919,18 @@ function registerColourLegend(colour) {
 function updateLegend() {
     const hasEarth    = elements.some(e => e.type === 'earth' && !e.eq);
     const hasEQ       = elements.some(e => e.type === 'earth' && e.eq);
-    const hasSolid    = elements.some(e => (e.type === 'freehand' || e.type === 'line') && !e.dashed && e.colour === '#222222');
+    const hasSolid    = elements.some(e => (e.type === 'freehand' || e.type === 'line' || ['rect','circle','triangle'].includes(e.type)) && !e.dashed && (e.colour === '#222222' || !e.colour || ['rect','circle','triangle'].includes(e.type)));
     const hasDashed   = elements.some(e => (e.type === 'freehand' || e.type === 'line') && e.dashed);
-    const hasRect     = elements.some(e => ['rect','circle','triangle'].includes(e.type));
     const hasMDB      = elements.some(e => e.type === 'mdb');
     const hasBond     = elements.some(e => e.type === 'bond');
 
     let html = '';
     if (hasEarth)  html += legendRow('symbol', null, 'earth-std',  'Standard Earth (E)');
     if (hasEQ)     html += legendRow('symbol', null, 'earth-eq',   'EQ / Protective Earth');
-    if (hasSolid)  html += legendRow('line',   '#222', false,       'Building / Structure');
-    if (hasDashed) html += legendRow('line',   '#e74c3c', true,     'Conductor (Down / Air Terminal)');
-    if (hasRect)   html += legendRow('line',   '#222', false,       'Shape / Zone');
-    if (hasMDB)    html += legendRow('symbol', null, 'mdb',         'MDB – Main Distribution Board');
-    if (hasBond)   html += legendRow('symbol', null, 'bond',        'Bond Point');
+    if (hasSolid)  html += legendRow('line',   '#222222', false,   'Building / Structure');
+    if (hasDashed) html += legendRow('line',   '#e74c3c', true,    'Conductor (Down / Air Terminal)');
+    if (hasMDB)    html += legendRow('symbol', null, 'mdb',        'MDB – Main Distribution Board');
+    if (hasBond)   html += legendRow('symbol', null, 'bond',       'Bond Point');
 
     // Custom colour lines
     const customColours = [...new Set(
@@ -865,17 +1037,15 @@ function buildLegendData() {
     const items = [];
     const hasEarth  = elements.some(e => e.type === 'earth' && !e.eq);
     const hasEQ     = elements.some(e => e.type === 'earth' && e.eq);
-    const hasSolid  = elements.some(e => (e.type === 'freehand'||e.type==='line') && !e.dashed && e.colour==='#222222');
+    const hasSolid  = elements.some(e => (e.type === 'freehand'||e.type==='line'||['rect','circle','triangle'].includes(e.type)) && !e.dashed);
     const hasDashed = elements.some(e => (e.type === 'freehand'||e.type==='line') && e.dashed);
-    const hasRect   = elements.some(e => ['rect','circle','triangle'].includes(e.type));
     const hasMDB    = elements.some(e => e.type === 'mdb');
     const hasBond   = elements.some(e => e.type === 'bond');
 
     if (hasEarth)  items.push({ kind:'earth-std',  label:'Standard Earth (E)' });
     if (hasEQ)     items.push({ kind:'earth-eq',   label:'EQ / Protective Earth' });
-    if (hasSolid)  items.push({ kind:'line',  colour:'#222',     dashed:false, label:'Building / Structure' });
-    if (hasDashed) items.push({ kind:'line',  colour:'#e74c3c',  dashed:true,  label:'Conductor' });
-    if (hasRect)   items.push({ kind:'line',  colour:'#222',     dashed:false, label:'Shape / Zone' });
+    if (hasSolid)  items.push({ kind:'line',  colour:'#222222', dashed:false, label:'Building / Structure' });
+    if (hasDashed) items.push({ kind:'line',  colour:'#e74c3c', dashed:true,  label:'Conductor' });
     if (hasMDB)    items.push({ kind:'mdb',   label:'MDB – Main Distribution Board' });
     if (hasBond)   items.push({ kind:'bond',  label:'Bond Point' });
 
