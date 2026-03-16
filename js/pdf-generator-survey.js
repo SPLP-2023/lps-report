@@ -486,7 +486,7 @@ async function generateSurveyPDF() {
         if (surveyDrawing) {
             const drawingMeta = {
                 siteName: siteName || '',
-                address:  surveyData.siteAddress || '',
+                address:  siteAddress || '',
                 date:     surveyDate || '',
                 legend:   []
             };
