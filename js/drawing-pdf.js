@@ -24,7 +24,7 @@ async function exportDrawingPDF() {
 
         const fileDate  = formatFilenameDate(meta.date);
         const cleanName = (meta.siteName || 'Site').replace(/[^a-z0-9 ]/gi, '').trim();
-        pdf.save(`LP Drawing - ${cleanName} [${fileDate}].pdf`);
+        pdf.save(`LP Drawing - ${cleanName} ${fileDate}.pdf`);
 
     } catch(err) {
         console.error('PDF export error:', err);
