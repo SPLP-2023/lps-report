@@ -189,11 +189,17 @@ async function exportDrawingPDF() {
                 ly += Math.max(ROW_H, lines.length * 4.5 + 3);
 
             } else if (item.kind === 'bond') {
-                pdf.setFontSize(12);
-                pdf.setFont('helvetica','normal');
-                pdf.setTextColor(26,26,26);
-                pdf.text('⊷', SWATCH_X + 1, ly);
+                // Draw bond symbol as lines + filled circle (avoids Unicode font issues)
+                const bx = SWATCH_X + 7;
+                pdf.setDrawColor(26,26,26);
+                pdf.setFillColor(26,26,26);
+                pdf.setLineWidth(0.8);
+                pdf.setLineDash([]);
+                pdf.line(SWATCH_X, ly - 2, bx - 3, ly - 2);
+                pdf.circle(bx, ly - 2, 2.5, 'F');
+                pdf.line(bx + 3, ly - 2, SWATCH_X + 14, ly - 2);
                 pdf.setFontSize(8.5);
+                pdf.setFont('helvetica','normal');
                 pdf.setTextColor(15,15,15);
                 const lines = pdf.splitTextToSize(item.label, LABEL_W);
                 lines.forEach((ln, i) => {
@@ -213,7 +219,8 @@ async function exportDrawingPDF() {
         pdf.setFontSize(9.5);
         pdf.setFont('helvetica','normal');
         pdf.setTextColor(15,15,15);
-        pdf.text(scale, TB_X + 3, scaleY + 13.5);
+        // Centred within the title block
+        pdf.text(scale, TB_X + TB_W / 2, scaleY + 13.5, { align: 'center' });
 
         // ── Drawn By / Date ───────────────────────────
         const bottomY = PH - MARGIN - 18;
