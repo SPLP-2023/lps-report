@@ -151,15 +151,20 @@
                 <input type="file" id="bgUpload" accept="image/*" style="display:none" onchange="loadBackground(this)">
                 <button class="small-btn danger" onclick="clearBackground()" id="btnClearBg" style="display:none">✕ Remove</button>
             </label>
+            <!-- Edit/Lock BG toggle — shown after upload -->
+            <label class="ctrl-item" id="bgEditControls" style="display:none">
+                <button class="small-btn btn-warning" id="btnBgLock" onclick="toggleBgLock()">🔓 Edit BG</button>
+            </label>
+            <!-- Rotate — only shown when unlocked -->
+            <label class="ctrl-item" id="bgRotateControls" style="display:none">
+                <span>Rotate</span>
+                <button class="small-btn" onclick="rotateBg(-90)">↺ 90°</button>
+                <button class="small-btn" onclick="rotateBg(90)">↻ 90°</button>
+            </label>
             <label class="ctrl-item" id="opacityCtrl" style="display:none">
                 <span>Opacity</span>
                 <input type="range" id="bgOpacity" min="5" max="100" value="40" oninput="setBgOpacity(this.value)">
                 <span id="bgOpacityLabel">40%</span>
-            </label>
-            <label class="ctrl-item" id="bgRotateControls" style="display:none">
-                <span>Rotate</span>
-                <button class="small-btn" onclick="rotateBg(-90)" title="Rotate 90° anti-clockwise">↺ 90°</button>
-                <button class="small-btn" onclick="rotateBg(90)"  title="Rotate 90° clockwise">↻ 90°</button>
             </label>
             <label class="ctrl-item">
                 <input type="checkbox" id="chkGrid" onchange="toggleGrid(this.checked)">
