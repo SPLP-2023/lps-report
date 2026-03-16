@@ -1,0 +1,400 @@
+/* =====================================================
+   STRIKER DRAWING TOOL — drawing.css
+   ===================================================== */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: Arial, sans-serif;
+    background: #eef0f3;
+    color: #333;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ── Nav Header (override container constraint) ── */
+.nav-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 2px solid #dee2e6;
+    background: white;
+    flex-shrink: 0;
+    z-index: 50;
+}
+.nav-header .page-title { font-size: 1em; color: #2c3e50; font-weight: 700; }
+.nav-button { padding: 8px 18px; font-size: 14px; }
+
+/* ── Main Drawing App Layout ── */
+.drawing-app {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* =====================================================
+   TOOLBAR (LEFT)
+   ===================================================== */
+.toolbar {
+    width: 82px;
+    background: #0d1b2a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0 16px;
+    gap: 2px;
+    overflow-y: auto;
+    flex-shrink: 0;
+    z-index: 30;
+}
+
+.toolbar-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.35);
+    margin: 6px 0 2px;
+    text-align: center;
+    width: 100%;
+}
+
+.toolbar-divider {
+    width: 50%;
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+    margin: 6px 0;
+}
+
+.tool-btn {
+    width: 66px;
+    min-height: 52px;
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    color: rgba(255,255,255,0.65);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 4px;
+    transition: all 0.15s;
+    font-size: 10px;
+    transform: none;
+}
+.tool-btn svg { width: 22px; height: 22px; fill: currentColor; }
+.tool-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: white;
+    transform: none;
+}
+.tool-btn.active {
+    background: #0877c3;
+    border-color: rgba(255,255,255,0.3);
+    color: white;
+    box-shadow: 0 2px 8px rgba(8,119,195,0.5);
+}
+.tool-btn.action-btn { color: rgba(255,255,255,0.5); }
+.tool-btn.danger-btn:hover { background: rgba(231,76,60,0.3); color: #e74c3c; }
+
+/* Sub-options (line style, earth type) */
+.sub-options {
+    width: 100%;
+    padding: 4px 8px 8px;
+    background: rgba(255,255,255,0.04);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sub-label {
+    font-size: 9px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+}
+.style-btn {
+    width: 100%;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid transparent;
+    border-radius: 5px;
+    padding: 4px;
+    cursor: pointer;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: none;
+}
+.style-btn svg { width: 100%; height: 14px; }
+.style-btn:hover { border-color: rgba(255,255,255,0.25); transform: none; }
+.style-btn.active { border-color: #0877c3; background: rgba(8,119,195,0.2); }
+
+/* Colour swatches */
+.colour-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+}
+.colour-swatch {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.15s;
+    transform: none;
+    min-width: 0;
+    min-height: 0;
+}
+.colour-swatch:hover { border-color: white; transform: scale(1.1); }
+.colour-swatch.active { border-color: white; box-shadow: 0 0 0 2px #0877c3; }
+.colour-custom {
+    background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.colour-custom input[type="color"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    border: none;
+    padding: 0;
+}
+.colour-custom span {
+    font-size: 14px;
+    color: white;
+    font-weight: bold;
+    pointer-events: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+/* Earth type toggle */
+.toggle-pair {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.toggle-opt {
+    width: 100%;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid transparent;
+    border-radius: 5px;
+    padding: 5px 4px;
+    cursor: pointer;
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    transform: none;
+}
+.toggle-opt:hover { border-color: rgba(255,255,255,0.25); color: white; transform: none; }
+.toggle-opt.active { border-color: #0877c3; background: rgba(8,119,195,0.3); color: white; }
+
+/* =====================================================
+   CANVAS AREA (CENTRE)
+   ===================================================== */
+.canvas-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    background: #d8dce2;
+}
+
+/* Controls bar above canvas */
+.canvas-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 14px;
+    background: white;
+    border-bottom: 1px solid #dee2e6;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    font-size: 12px;
+}
+.ctrl-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #555;
+    white-space: nowrap;
+}
+.ctrl-item input[type="range"] { width: 90px; }
+.ctrl-item input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
+
+/* Canvas wrapper — scrollable container */
+.canvas-wrapper {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 20px;
+}
+
+/* All three canvases stacked */
+#bgCanvas, #mainCanvas, #previewCanvas {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    border-radius: 4px;
+}
+#bgCanvas    { z-index: 1; background: white; box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
+#mainCanvas  { z-index: 2; background: transparent; }
+#previewCanvas { z-index: 3; background: transparent; cursor: crosshair; }
+
+/* Delete overlay */
+.delete-overlay {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 40;
+}
+.delete-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.delete-btn.secondary {
+    background: #6c757d;
+}
+.delete-btn:hover { filter: brightness(1.1); transform: none; }
+
+/* Small buttons in controls */
+.small-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: none;
+    background: #0877c3;
+    color: white;
+    cursor: pointer;
+    transform: none;
+}
+.small-btn:hover { background: #065e9a; transform: none; }
+.small-btn.danger { background: #e74c3c; }
+.small-btn.danger:hover { background: #c0392b; }
+
+/* =====================================================
+   INFO PANEL (RIGHT)
+   ===================================================== */
+.info-panel {
+    width: 230px;
+    background: white;
+    border-left: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.panel-section {
+    border-bottom: 1px solid #e9ecef;
+    padding: 12px 14px;
+}
+
+.panel-heading {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #0877c3;
+    margin-bottom: 10px;
+}
+
+.panel-field { margin-bottom: 8px; }
+.panel-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6c757d;
+    margin-bottom: 3px;
+}
+.panel-field input[type="text"],
+.panel-field input[type="date"],
+.panel-field textarea {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+.panel-field textarea { resize: vertical; }
+
+/* Legend */
+.legend-list { font-size: 12px; }
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.legend-swatch {
+    width: 28px;
+    height: 14px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.legend-symbol { font-size: 16px; line-height: 1; }
+.legend-label { font-size: 11px; color: #444; flex: 1; }
+.legend-label-input {
+    font-size: 11px;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    padding: 2px 5px;
+    width: 100%;
+    color: #333;
+}
+.legend-empty { font-size: 11px; color: #aaa; font-style: italic; }
+
+/* Earth counter */
+.earth-counter {
+    font-size: 13px;
+    color: #333;
+}
+
+/* =====================================================
+   CANVAS CURSOR STATES
+   ===================================================== */
+.cursor-crosshair { cursor: crosshair; }
+.cursor-default   { cursor: default; }
+.cursor-move      { cursor: move; }
+.cursor-eraser    { cursor: cell; }
+
+/* =====================================================
+   RESPONSIVE — collapse panel on small screens
+   ===================================================== */
+@media (max-width: 768px) {
+    .info-panel { width: 180px; }
+    .toolbar { width: 64px; }
+    .tool-btn { width: 54px; min-height: 46px; font-size: 9px; }
+    .tool-btn svg { width: 18px; height: 18px; }
+}
+
+@media (max-width: 540px) {
+    .info-panel { display: none; }
+}
