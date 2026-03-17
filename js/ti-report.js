@@ -102,6 +102,7 @@ function saveFormData() {
             earthTableData:      earthTableData,
             systemDetails:       systemDetails,
             uploadedImages:      uploadedImages,
+            selectedRecommendations: window.selectedRecommendations || [],
             savedAt:             new Date().toISOString()
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -218,7 +219,38 @@ function restoreFormData() {
             });
         }
 
-        setTimeout(() => { isRestoring = false; saveFormData(); }, 2000);
+        // Recommendations
+        if (d.selectedRecommendations && Array.isArray(d.selectedRecommendations)) {
+            setTimeout(() => {
+                window.selectedRecommendations = d.selectedRecommendations;
+                d.selectedRecommendations.forEach(r => {
+                    const chk = document.getElementById('recchk-' + r.id);
+                    if (chk) {
+                        chk.checked = true;
+                        document.getElementById('rec-item-' + r.id)?.classList.add('rm-selected');
+                        const inputsRow = document.getElementById('rec-inputs-row-' + r.id);
+                        const photoRow  = document.getElementById('rec-photo-row-'  + r.id);
+                        if (inputsRow) inputsRow.style.display = 'flex';
+                        if (photoRow)  photoRow.style.display  = 'flex';
+                        const rec = RECOMMENDATIONS_CATALOGUE.find(rc => rc.id === r.id);
+                        if (rec && rec.hasQty) {
+                            const match = r.text.match(/install (\d+)/);
+                            const qtyEl = document.getElementById('recqty-' + r.id);
+                            if (qtyEl && match) qtyEl.value = match[1];
+                        }
+                        if (rec && rec.hasEarth) {
+                            const match = r.text.match(/\b(E\d+)\b/);
+                            const earthEl = document.getElementById('recearth-' + r.id);
+                            if (earthEl && match) earthEl.value = match[1];
+                        }
+                    }
+                });
+                renderSelectedRecs();
+                updateAllDots();
+            }, 600);
+        }
+        
+                setTimeout(() => { isRestoring = false; saveFormData(); }, 2000);
     } catch (e) {
         console.error('Restore failed:', e);
         isRestoring = false;
@@ -234,6 +266,8 @@ function setFieldValue(id, value) {
 function clearAllData() {
     localStorage.removeItem(STORAGE_KEY);
     selectedFailuresList = [];
+    window.selectedRecommendations = [];
+    window.imageStore = {};
     earthTableData = [];
     uploadedImages = {};
     systemDetails = {};
@@ -259,7 +293,7 @@ function clearAllData() {
         const el = document.getElementById(id);
         if (el) el.textContent = id.includes('building') ? 'Click to upload building image' : 'Click to upload earth test images';
     });
-
+    renderSelectedRecs();
     const dateField = document.getElementById('testDate');
     if (dateField) dateField.value = new Date().toISOString().split('T')[0];
 }
