@@ -382,6 +382,26 @@ function pinchAngle(t0, t1) {
 
 // ── Pointer events ─────────────────────────────────────
 const wrapper = document.getElementById('canvasWrapper');
+const zoomContainer = document.getElementById('canvasZoomContainer');
+
+// Zoom state (mobile only)
+let viewScale    = 1;
+let viewOffsetX  = 0;
+let viewOffsetY  = 0;
+
+// Pinch state
+let pinchStartDist2   = 0;
+let pinchStartScale   = 1;
+let pinchStartMidX    = 0;
+let pinchStartMidY    = 0;
+let pinchStartOffsetX = 0;
+let pinchStartOffsetY = 0;
+
+function applyZoom() {
+    if (window.innerWidth > 768) return;
+    zoomContainer.style.transform =
+        `translate(${viewOffsetX}px, ${viewOffsetY}px) scale(${viewScale})`;
+}
 
 previewCanvas.addEventListener('mousedown',  onPointerDown);
 previewCanvas.addEventListener('mousemove',  onPointerMove);
@@ -393,17 +413,22 @@ previewCanvas.addEventListener('touchstart', e => {
 
     if (e.touches.length === 2) {
         if (!bgLocked && bgImage) {
-            // Pinch to resize/rotate bg
-            pinchActive       = true;
-            pinchStartDist    = pinchDist(e.touches[0], e.touches[1]);
-            pinchStartAngle   = pinchAngle(e.touches[0], e.touches[1]);
-            pinchStartW       = bgW;
+            // Edit BG mode — pinch manipulates BG image
+            pinchActive        = true;
+            pinchStartDist     = pinchDist(e.touches[0], e.touches[1]);
+            pinchStartAngle    = pinchAngle(e.touches[0], e.touches[1]);
+            pinchStartW        = bgW;
             pinchStartRotation = bgRotation;
         } else {
-            // Two-finger pan (locked bg or no bg)
+            // Normal mode — two fingers zoom+pan the canvas view
+            pinchStartDist2   = pinchDist(e.touches[0], e.touches[1]);
+            pinchStartScale   = viewScale;
+            pinchStartOffsetX = viewOffsetX;
+            pinchStartOffsetY = viewOffsetY;
+            // Mid point in screen coords
+            pinchStartMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            pinchStartMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             twoFingerPanning = true;
-            panLastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-            panLastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         }
         return;
     }
@@ -415,6 +440,7 @@ previewCanvas.addEventListener('touchmove', e => {
 
     if (e.touches.length === 2) {
         if (pinchActive && !bgLocked && bgImage) {
+            // Edit BG mode
             const dist  = pinchDist(e.touches[0], e.touches[1]);
             const angle = pinchAngle(e.touches[0], e.touches[1]);
             const scale = dist / pinchStartDist;
@@ -424,12 +450,30 @@ previewCanvas.addEventListener('touchmove', e => {
             bgRotation = pinchStartRotation + (angle - pinchStartAngle);
             drawGrid();
         } else if (twoFingerPanning) {
-            const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-            const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            wrapper.scrollLeft -= (mx - panLastX);
-            wrapper.scrollTop  -= (my - panLastY);
-            panLastX = mx;
-            panLastY = my;
+            // Canvas zoom + pan
+            const dist  = pinchDist(e.touches[0], e.touches[1]);
+            const midX  = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const midY  = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+            const scaleRatio = dist / pinchStartDist2;
+            const newScale   = Math.min(5, Math.max(1, pinchStartScale * scaleRatio));
+
+            // Pan: move offset by how much the mid point moved
+            const dPanX = midX - pinchStartMidX;
+            const dPanY = midY - pinchStartMidY;
+
+            viewScale   = newScale;
+            viewOffsetX = pinchStartOffsetX + dPanX;
+            viewOffsetY = pinchStartOffsetY + dPanY;
+
+            // When zoomed back to 1x, snap offset to 0
+            if (viewScale <= 1.02) {
+                viewScale   = 1;
+                viewOffsetX = 0;
+                viewOffsetY = 0;
+            }
+
+            applyZoom();
         }
         return;
     }
@@ -440,7 +484,6 @@ previewCanvas.addEventListener('touchend', e => {
     e.preventDefault();
     if (pinchActive) { pinchActive = false; return; }
     if (twoFingerPanning) { twoFingerPanning = false; return; }
-    // Use changedTouches — e.touches is empty on touchend
     const syntheticE = { touches: e.changedTouches };
     onPointerUp(syntheticE);
 }, { passive: false });
@@ -1240,31 +1283,45 @@ document.getElementById('earth-type-opts').style.display = 'none';
 updateBgLockUI();
 
 // ── Canvas scaling ─────────────────────────────────────
-// Mobile: scale canvas to fill screen width (no horizontal scroll)
-// Desktop: ensure canvas CSS size is not overridden by mobile styles
 function fitCanvas() {
     const isMobile = window.innerWidth <= 768;
     const canvasArea = document.getElementById('canvasArea');
     const wrapper    = document.getElementById('canvasWrapper');
+    const zc         = document.getElementById('canvasZoomContainer');
 
     if (isMobile) {
         const w = canvasArea.clientWidth;
         const h = Math.round(w * CANVAS_H / CANVAS_W);
         wrapper.style.height = h + 'px';
+
+        // Size zoom container to natural display size
+        zc.style.width  = w + 'px';
+        zc.style.height = h + 'px';
+
         [bgCanvas, mainCanvas, previewCanvas].forEach(c => {
             c.style.width  = w + 'px';
             c.style.height = h + 'px';
             c.style.top    = '0';
             c.style.left   = '0';
         });
+
+        // Reset zoom on orientation change
+        viewScale   = 1;
+        viewOffsetX = 0;
+        viewOffsetY = 0;
+        applyZoom();
     } else {
-        // Desktop: restore natural canvas CSS size (internal resolution, scrollable)
+        // Desktop: natural scrollable canvas, no zoom transform
         wrapper.style.height = '';
+        zc.style.width  = CANVAS_W + 'px';
+        zc.style.height = CANVAS_H + 'px';
+        zc.style.transform = '';
+
         [bgCanvas, mainCanvas, previewCanvas].forEach(c => {
             c.style.width  = CANVAS_W + 'px';
             c.style.height = CANVAS_H + 'px';
-            c.style.top    = '20px';
-            c.style.left   = '20px';
+            c.style.top    = '0';
+            c.style.left   = '0';
         });
     }
 }
