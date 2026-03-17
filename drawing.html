@@ -193,9 +193,11 @@
         </div>
 
         <div class="canvas-wrapper" id="canvasWrapper">
-            <canvas id="bgCanvas"></canvas>
-            <canvas id="mainCanvas"></canvas>
-            <canvas id="previewCanvas"></canvas>
+            <div id="canvasZoomContainer">
+                <canvas id="bgCanvas"></canvas>
+                <canvas id="mainCanvas"></canvas>
+                <canvas id="previewCanvas"></canvas>
+            </div>
         </div>
 
         <div class="delete-overlay" id="deleteOverlay" style="display:none;">
@@ -413,7 +415,7 @@
     };
     const REPORT_URLS = {
         survey:   'survey.html',
-        ti:       'ti-report.html',
+        ti:       't&i-report.html',
         remedial: 'remedial-report.html'
     };
 
