@@ -249,7 +249,6 @@ body {
 #canvasZoomContainer {
     position: relative;
     transform-origin: top left;
-    /* transition: transform 0.05s ease-out; -- removed for responsiveness */
 }
 
 /* All three canvases stacked inside zoom container */
@@ -262,6 +261,13 @@ body {
 #bgCanvas    { z-index: 1; background: white; box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
 #mainCanvas  { z-index: 2; background: transparent; }
 #previewCanvas { z-index: 3; background: transparent; cursor: crosshair; }
+
+/* Desktop: zoom container sits inside padded wrapper */
+@media (min-width: 769px) {
+    #canvasZoomContainer {
+        margin: 20px;
+    }
+}
 
 /* Used/disabled state for single-use tools like Entrance */
 .tool-btn.tool-used {
