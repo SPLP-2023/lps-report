@@ -245,13 +245,14 @@ body {
     background: #d8dce2;
 }
 
-/* Zoom container — desktop: acts as transparent passthrough */
+/* Zoom container — desktop: absolute passthrough, mobile: relative for transform */
 #canvasZoomContainer {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    transform-origin: top left;
 }
 
 /* All three canvases stacked inside zoom container */
@@ -264,22 +265,6 @@ body {
 #bgCanvas    { z-index: 1; background: white; box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
 #mainCanvas  { z-index: 2; background: transparent; }
 #previewCanvas { z-index: 3; background: transparent; cursor: crosshair; }
-
-/* Mobile: zoom container uses transform, canvases fill from top-left */
-@media (max-width: 768px) {
-    #canvasZoomContainer {
-        position: relative;
-        transform-origin: top left;
-        width: auto;
-        height: auto;
-    }
-    #bgCanvas, #mainCanvas, #previewCanvas {
-        top: 0;
-        left: 0;
-        border-radius: 0;
-        box-shadow: none;
-    }
-}
 
 /* Used/disabled state for single-use tools like Entrance */
 .tool-btn.tool-used {
