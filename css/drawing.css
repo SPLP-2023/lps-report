@@ -245,11 +245,18 @@ body {
     background: #d8dce2;
 }
 
-/* All three canvases stacked */
+/* Zoom container — CSS transform applied by JS on mobile */
+#canvasZoomContainer {
+    position: relative;
+    transform-origin: top left;
+    /* transition: transform 0.05s ease-out; -- removed for responsiveness */
+}
+
+/* All three canvases stacked inside zoom container */
 #bgCanvas, #mainCanvas, #previewCanvas {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    top: 0;
+    left: 0;
     border-radius: 4px;
 }
 #bgCanvas    { z-index: 1; background: white; box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
@@ -296,6 +303,13 @@ body {
     #bgCanvas, #mainCanvas, #previewCanvas {
         border-radius: 0;
         box-shadow: none;
+    }
+    /* Info panel — ALWAYS hidden until opened */
+    .info-panel {
+        transform: translateX(100%) !important;
+    }
+    .info-panel.panel-open {
+        transform: translateX(0) !important;
     }
 }
 
