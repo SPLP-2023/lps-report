@@ -7,6 +7,7 @@ const ASSETS = [
     './tools.html',
     './ti-report.html',
     './css/styles.css',
+    './css/drawing.css',
     './js/data.js',
     './js/exif.js',
     './js/touch-signature.js',
