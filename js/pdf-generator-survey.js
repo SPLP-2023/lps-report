@@ -122,8 +122,9 @@ function svFormatDateShort(dateStr) {
 // MATCHES T&I buildCoverPage exactly
 
 function svBuildCoverPage(pdf, data) {
-    const { siteName, siteAddress, surveyDate, surveyorName, clientRepName,
-            signatureData, buildingImage, jobReference } = data;
+    const { siteName, siteAddress, surveyDate, surveyorName,
+            clientSignatureData, clientSignatureName,
+            buildingImage, jobReference } = data;
 
     // Top navy bar (same as T&I)
     pdf.setFillColor(...SV_NAVY);
@@ -224,7 +225,7 @@ function svBuildCoverPage(pdf, data) {
 
     // Row 2: Surveyor | Site Representative
     infoField('Surveyor', surveyorName, col1X, y + rowH);
-    infoField('Site Representative', clientRepName, col2X, y + rowH);
+    infoField('Site Representative', clientSignatureName || '', col2X, y + rowH);
 
     // Row divider
     pdf.line(cardX + 1, y + rowH * 2, cardX + cardW - 1, y + rowH * 2);
@@ -234,8 +235,8 @@ function svBuildCoverPage(pdf, data) {
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(...labelColor);
     pdf.text('SITE REPRESENTATIVE SIGNATURE', col2X, y + rowH * 2 + 4);
-    if (signatureData) {
-        try { pdf.addImage(signatureData, 'PNG', col2X, y + rowH * 2 + 5, 50, 11); } catch(e) {}
+    if (clientSignatureData) {
+        try { pdf.addImage(clientSignatureData, 'PNG', col2X, y + rowH * 2 + 5, 50, 11); } catch(e) {}
     }
 
     svAddFooterToPage(pdf);
@@ -432,7 +433,6 @@ async function generateSurveyPDF() {
     const siteAddress    = document.getElementById('siteAddress')?.value || '';
     const surveyDate     = document.getElementById('surveyDate')?.value || '';
     const surveyorName   = document.getElementById('surveyorName')?.value || '';
-    const clientRepName  = document.getElementById('clientRepName')?.value || '';
 
     if (!siteAddress.trim() && !siteName.trim()) {
         alert('Please enter at least a Site Name or Site Address before generating the report.');
@@ -446,8 +446,9 @@ async function generateSurveyPDF() {
         }).filter(Boolean);
 
     const d = {
-        siteName, jobReference, siteAddress, surveyDate, surveyorName, clientRepName,
-        signatureData:     window.clientSignature ? window.clientSignature.getSignatureData() : null,
+        siteName, jobReference, siteAddress, surveyDate, surveyorName,
+        clientSignatureData: typeof window.getClientSignatureData === 'function' ? window.getClientSignatureData().clientSignatureData : null,
+        clientSignatureName: typeof window.getClientSignatureData === 'function' ? window.getClientSignatureData().clientSignatureName : '',
         buildingImage:     window.uploadedImages['buildingImagePreview_data'] || null,
         structureType:     document.getElementById('structureType')?.value || '',
         structureHeight:   document.getElementById('structureHeight')?.value || '',
