@@ -318,12 +318,12 @@ function initSurveyAutoSave() {
 
         dateFields: ['surveyDate'],
         onSave: () => {
-            // Save images from window.uploadedImages
             const imgs = {};
             const ui = window.uploadedImages || {};
             if (ui['buildingImagePreview_data']) imgs['buildingImagePreview_data'] = ui['buildingImagePreview_data'];
             if (ui['additionalPhotosPreview_data']) imgs['additionalPhotosPreview_data'] = ui['additionalPhotosPreview_data'];
-            return { _images: imgs };
+            const sigData = typeof window.getClientSignatureData === 'function' ? window.getClientSignatureData() : {};
+            return { _images: imgs, ...sigData };
         },
         onRestore: (d) => {
             if (d._images) {
@@ -340,6 +340,9 @@ function initSurveyAutoSave() {
                     if (el) el.textContent = '✓ ' + (Array.isArray(arr) ? arr.length : 1) + ' photo(s) restored';
                 }
             }
+            if (typeof window.restoreClientSignature === 'function') {
+                window.restoreClientSignature({ clientSignatureData: d.clientSignatureData, clientSignatureName: d.clientSignatureName });
+            }
             if (typeof updateAllDots === 'function') setTimeout(updateAllDots, 200);
         },
         clearExtra: () => {
@@ -349,6 +352,13 @@ function initSurveyAutoSave() {
             const ap = document.getElementById('additionalPhotosPreview');
             if (ap) ap.textContent = 'Click to upload survey photos';
 
+            if (typeof window.restoreClientSignature === 'function') {
+                window.restoreClientSignature({ clientSignatureData: null, clientSignatureName: '' });
+            }
+            const ind = document.getElementById('sigSavedIndicator');
+            if (ind) ind.style.display = 'none';
+            const btn = document.getElementById('btnOpenSigModal');
+            if (btn) btn.textContent = '✍️ Add Client Signature';
             if (typeof updateAllDots === 'function') updateAllDots();
         }
     });
