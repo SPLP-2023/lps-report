@@ -140,12 +140,14 @@ function svBuildCoverPage(pdf, data) {
     } catch (e) { y += 56; }
 
     // Building image — same as T&I: MARGIN, y, PAGE_W-MARGIN*2, 65, centred
+    // Fixed reserved height for building image — layout below always starts at same Y
+    const IMG_RESERVED = 70;
     if (buildingImage) {
         try {
-            const imgH = svAddImageToPDF(pdf, buildingImage, SV_MARGIN, y, SV_PAGE_W - SV_MARGIN * 2, 65, true);
-            y += imgH + 6;
-        } catch (e) { y += 6; }
+            svAddImageToPDF(pdf, buildingImage, SV_MARGIN, y, SV_PAGE_W - SV_MARGIN * 2, IMG_RESERVED, true);
+        } catch (e) {}
     }
+    y += IMG_RESERVED + 4;
 
     // Site name and address — same as T&I (below image)
     const cardX = SV_MARGIN;
