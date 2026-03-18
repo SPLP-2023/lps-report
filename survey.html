@@ -51,24 +51,10 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="surveyorName">Surveyor Name:</label>
-                    <input type="text" id="surveyorName" placeholder="Enter surveyor name...">
-                </div>
-                <div class="form-group">
-                    <label for="clientRepName">Site Representative Name:</label>
-                    <input type="text" id="clientRepName" placeholder="Enter site representative name...">
+                    <input type="text" id="surveyorName" placeholder="Enter surveyor name..." oninput="this.value=this.value.replace(/(?:^|\s)\S/g,c=>c.toUpperCase())">
                 </div>
             </div>
-            <div class="form-group">
-                <label>Site Representative Signature:</label>
-                <div class="signature-container">
-                    <canvas id="signatureCanvas" width="300" height="120"></canvas>
-                    <div class="signature-controls">
-                        <button type="button" id="clearSignature" class="signature-btn clear-btn">Clear</button>
-                        <button type="button" id="saveSignature" class="signature-btn save-btn">Save</button>
-                    </div>
-                    <div id="signatureStatus" class="signature-status">Please sign above</div>
-                </div>
-            </div>
+
             <div class="form-group">
                 <label>Building Image (Cover Page):</label>
                 <div class="image-upload" onclick="document.getElementById('buildingImageFile').click()">
