@@ -354,6 +354,27 @@
         </div>
     </div>
 
+        <!-- ══ Client Signature Section ══ -->
+        <div class="section" id="sec-client-sig">
+            <button class="section-header" onclick="toggleSection('sec-client-sig')">
+                <span class="section-title">✍️ Client Signature</span>
+                <span class="section-right"><span class="status-dot" id="dot-sec-client-sig"></span><span class="chevron">▾</span></span>
+            </button>
+            <div class="section-body" id="body-sec-client-sig">
+                <div style="text-align:center;padding:16px 0;">
+                    <div id="sigSavedIndicator" style="display:none;margin-bottom:12px;">
+                        <span style="color:#27ae60;font-weight:700;font-size:15px;">✅ Signature saved</span>
+                        <span id="sigSavedName" style="color:#0d1b2a;font-size:13px;margin-left:8px;"></span>
+                    </div>
+                    <button type="button" id="btnOpenSigModal" onclick="openSigModal()"
+                        style="background:linear-gradient(135deg,#0877c3,#0d1b2a);color:white;border:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">
+                        ✍️ Add Client Signature
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- ══ End Client Signature Section ══ -->
+
      <!-- ══ Site Drawing Section ══ -->
         <div class="section" style="margin-bottom: 80px;">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,#0d1b2a 0%,#0877c3 100%);border-radius:8px 8px 0 0;color:white;">
@@ -387,6 +408,121 @@
 <div class="sticky-generate">
     <button id="generateSurveyReport" onclick="generateSurveyPDF()">⚡ Generate Survey Report PDF</button>
 </div>
+
+<!-- ══ Client Signature Modal ══ -->
+<div id="sigModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:14px;padding:28px 24px;width:92%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.25);">
+        <h3 style="margin:0 0 18px;font-size:1.1em;color:#0d1b2a;">✍️ Client Signature</h3>
+        <div class="form-group" style="margin-bottom:14px;">
+            <label for="sigModalName" style="font-weight:600;font-size:13px;">Client / Site Representative Name:</label>
+            <input type="text" id="sigModalName" placeholder="Enter name..."
+                oninput="this.value=this.value.replace(/(?:^|\s)\S/g,c=>c.toUpperCase())"
+                style="margin-top:6px;width:100%;padding:10px;border:2px solid #e9ecef;border-radius:6px;font-size:14px;">
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:6px;">Signature:</label>
+            <div style="border:2px solid #0877c3;border-radius:8px;background:#fff;">
+                <canvas id="sigModalCanvas" width="380" height="150"
+                    style="width:100%;height:150px;display:block;border-radius:6px;cursor:crosshair;touch-action:none;"></canvas>
+            </div>
+            <button type="button" onclick="clearSigModal()"
+                style="margin-top:6px;background:#6c757d;color:white;border:none;padding:5px 14px;border-radius:5px;font-size:12px;cursor:pointer;">
+                Clear
+            </button>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button type="button" onclick="closeSigModal()"
+                style="background:#e9ecef;color:#555;border:none;padding:10px 22px;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer;">
+                Cancel
+            </button>
+            <button type="button" onclick="submitSigModal()"
+                style="background:linear-gradient(135deg,#0877c3,#0d1b2a);color:white;border:none;padding:10px 22px;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer;">
+                ✅ Save Signature
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Client Signature Modal ───────────────────────────
+let _sigCanvas, _sigCtx, _sigDrawing = false;
+let _clientSignatureData = null;
+let _clientSignatureName = '';
+
+function openSigModal() {
+    const modal = document.getElementById('sigModal');
+    modal.style.display = 'flex';
+    _sigCanvas = document.getElementById('sigModalCanvas');
+    _sigCtx    = _sigCanvas.getContext('2d');
+    _sigCtx.clearRect(0, 0, _sigCanvas.width, _sigCanvas.height);
+    if (_clientSignatureData) {
+        const img = new Image();
+        img.onload = () => _sigCtx.drawImage(img, 0, 0);
+        img.src = _clientSignatureData;
+    }
+    document.getElementById('sigModalName').value = _clientSignatureName || '';
+    _sigCanvas.onmousedown  = e => { _sigDrawing = true; _sigCtx.beginPath(); const p = _sigPos(e); _sigCtx.moveTo(p.x, p.y); };
+    _sigCanvas.onmousemove  = e => { if (!_sigDrawing) return; const p = _sigPos(e); _sigCtx.lineTo(p.x, p.y); _sigCtx.strokeStyle='#111'; _sigCtx.lineWidth=2; _sigCtx.lineCap='round'; _sigCtx.stroke(); };
+    _sigCanvas.onmouseup    = () => _sigDrawing = false;
+    _sigCanvas.onmouseleave = () => _sigDrawing = false;
+    _sigCanvas.ontouchstart = e => { e.preventDefault(); _sigDrawing = true; _sigCtx.beginPath(); const p = _sigTouchPos(e); _sigCtx.moveTo(p.x, p.y); };
+    _sigCanvas.ontouchmove  = e => { e.preventDefault(); if (!_sigDrawing) return; const p = _sigTouchPos(e); _sigCtx.lineTo(p.x, p.y); _sigCtx.strokeStyle='#111'; _sigCtx.lineWidth=2; _sigCtx.lineCap='round'; _sigCtx.stroke(); };
+    _sigCanvas.ontouchend   = e => { e.preventDefault(); _sigDrawing = false; };
+}
+function _sigPos(e) {
+    const r = _sigCanvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * (_sigCanvas.width / r.width), y: (e.clientY - r.top) * (_sigCanvas.height / r.height) };
+}
+function _sigTouchPos(e) {
+    const t = e.touches[0], r = _sigCanvas.getBoundingClientRect();
+    return { x: (t.clientX - r.left) * (_sigCanvas.width / r.width), y: (t.clientY - r.top) * (_sigCanvas.height / r.height) };
+}
+function clearSigModal() {
+    if (_sigCtx) _sigCtx.clearRect(0, 0, _sigCanvas.width, _sigCanvas.height);
+}
+function closeSigModal() {
+    document.getElementById('sigModal').style.display = 'none';
+}
+function submitSigModal() {
+    const name = document.getElementById('sigModalName').value.trim();
+    const blank = document.createElement('canvas');
+    blank.width = _sigCanvas.width; blank.height = _sigCanvas.height;
+    const isEmpty = !_sigCtx || _sigCanvas.toDataURL() === blank.toDataURL();
+    _clientSignatureName = name;
+    _clientSignatureData = isEmpty ? null : _sigCanvas.toDataURL('image/png');
+    const indicator = document.getElementById('sigSavedIndicator');
+    const nameSpan  = document.getElementById('sigSavedName');
+    const btn       = document.getElementById('btnOpenSigModal');
+    if (_clientSignatureData || name) {
+        indicator.style.display = 'block';
+        nameSpan.textContent    = name ? '— ' + name : '';
+        btn.textContent         = '✍️ Edit Signature';
+        const dot = document.getElementById('dot-sec-client-sig');
+        if (dot) { dot.classList.add('dot-filled'); dot.classList.remove('dot-empty'); }
+    }
+    if (typeof window.triggerAutoSave === 'function') window.triggerAutoSave();
+    closeSigModal();
+}
+window.getClientSignatureData = function() {
+    return { clientSignatureData: _clientSignatureData, clientSignatureName: _clientSignatureName };
+};
+window.restoreClientSignature = function(data) {
+    if (!data) return;
+    _clientSignatureData = data.clientSignatureData || null;
+    _clientSignatureName = data.clientSignatureName || '';
+    if (_clientSignatureData || _clientSignatureName) {
+        const indicator = document.getElementById('sigSavedIndicator');
+        const nameSpan  = document.getElementById('sigSavedName');
+        const btn       = document.getElementById('btnOpenSigModal');
+        if (indicator) indicator.style.display = 'block';
+        if (nameSpan)  nameSpan.textContent = _clientSignatureName ? '— ' + _clientSignatureName : '';
+        if (btn)       btn.textContent = '✍️ Edit Signature';
+        const dot = document.getElementById('dot-sec-client-sig');
+        if (dot) { dot.classList.add('dot-filled'); dot.classList.remove('dot-empty'); }
+    }
+};
+</script>
+<!-- ══ End Client Signature Modal ══ -->
 
 <!-- ===================== SCRIPTS ===================== -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -496,7 +632,7 @@
 const SECTION_IDS = ['sec-site','sec-structure','sec-lp','sec-risk','sec-electrical','sec-observations','sec-photos'];
 
 const SECTION_FIELDS = {
-    'sec-site':         ['siteName','siteAddress','surveyDate','surveyorName','clientRepName','jobReference'],
+    'sec-site':         ['siteName','siteAddress','surveyDate','surveyorName','jobReference'],
     'sec-structure':    ['structureType','structureHeight','buildingAge','numberOfFloors','numberOfOccupants','roofType','roofAccess','hasBasement'],
     'sec-lp':           ['existingSystem','systemCondition','lastTested','standardInstalled'],
     'sec-risk':         [],
@@ -564,9 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAllDots();
     const d = document.getElementById('surveyDate');
     if (d && !d.value) d.valueAsDate = new Date();
-    if (typeof TouchSignature !== 'undefined') {
-        window.clientSignature = new TouchSignature('signatureCanvas','clearSignature','saveSignature','signatureStatus');
-    }
+
 });
 </script>
 </body>
