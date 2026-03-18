@@ -1,9 +1,6 @@
 // Enhanced Survey Report JavaScript
 // File: js/survey-report.js
 
-// Global signature instance
-let clientSignature;
-
 // Initialize the survey report
 document.addEventListener('DOMContentLoaded', function() {
     // Set today's date as default
@@ -11,18 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (surveyDateElement) {
         surveyDateElement.valueAsDate = new Date();
     }
-    
-    // Initialize touch signature
-    clientSignature = createTouchSignature(
-        'signatureCanvas',
-        'clearSignature', 
-        'saveSignature',
-        'signatureStatus'
-    );
-    // Expose on window so autosave can access it
-    window.surveyClientSignature = clientSignature;
 
-    // Start auto-save (must be after signature init)
+    // Start auto-save
     initSurveyAutoSave();
 });
 
@@ -193,7 +180,7 @@ function clearSurveyData() {
         document.getElementById('siteAddress').value = '';
         document.getElementById('surveyDate').valueAsDate = new Date();
         document.getElementById('surveyorName').value = '';
-        document.getElementById('clientRepName').value = '';
+
         
         // Clear structure fields
         document.getElementById('structureType').value = '';
@@ -222,9 +209,7 @@ function clearSurveyData() {
         });
         
         // Clear signature
-        if (clientSignature) {
-            clientSignature.reset();
-        }
+
         
         // Clear uploaded images
         window.uploadedImages = {};
@@ -244,7 +229,7 @@ function getSurveyData() {
         siteAddress: document.getElementById('siteAddress')?.value || '',
         surveyDate: document.getElementById('surveyDate')?.value || '',
         surveyorName: document.getElementById('surveyorName')?.value || '',
-        clientRepName: document.getElementById('clientRepName')?.value || '',
+
         
         // Structure details
         structureType: document.getElementById('structureType')?.value || '',
@@ -274,7 +259,7 @@ function getSurveyData() {
         recommendations: document.getElementById('recommendations')?.value || '',
         
         // Signature
-        signatureData: clientSignature ? clientSignature.getSignatureData() : null,
+
         
         // Auto-generated description - call the function separately to avoid circular reference
         autoDescription: generateAutoDescription()
@@ -308,7 +293,7 @@ function initSurveyAutoSave() {
     initAutoSave({
         storageKey: 'splp_survey_autosave_v1',
         fields: [
-            'siteName','jobReference','siteAddress','surveyDate','surveyorName','clientRepName',
+            'siteName','jobReference','siteAddress','surveyDate','surveyorName',
             'structureType','structureHeight','buildingAge','numberOfFloors','numberOfOccupants',
             'hasBasement','roofType','roofAccess','existingSystem','systemCondition',
             'lastTested','standardInstalled','surveyFindings'
@@ -330,7 +315,7 @@ function initSurveyAutoSave() {
             'emergencyLighting','signageLighting','hvacControls','buildingManagement',
             'liftSystems','industrialControls','medicalEquipment','serverRoom'
         ],
-        signature: 'surveyClientSignature',
+
         dateFields: ['surveyDate'],
         onSave: () => {
             // Save images from window.uploadedImages
@@ -363,7 +348,7 @@ function initSurveyAutoSave() {
             if (bp) bp.textContent = 'Click to upload building photo';
             const ap = document.getElementById('additionalPhotosPreview');
             if (ap) ap.textContent = 'Click to upload survey photos';
-            if (clientSignature && typeof clientSignature.reset === 'function') clientSignature.reset();
+
             if (typeof updateAllDots === 'function') updateAllDots();
         }
     });
