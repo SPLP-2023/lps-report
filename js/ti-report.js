@@ -17,15 +17,6 @@ let isRestoring = false;
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', function () {
-    // Init signature
-    if (document.getElementById('siteStaffSignatureCanvas')) {
-        window.siteStaffSignature = new TouchSignature(
-            'siteStaffSignatureCanvas',
-            'clearSiteStaffSignature',
-            'saveSiteStaffSignature',
-            'siteStaffSignatureStatus'
-        );
-    }
 
     // Set today's date if empty
     const dateField = document.getElementById('testDate');
@@ -75,13 +66,12 @@ function saveFormData() {
     if (isRestoring) return;
     try {
         const data = {
+            siteName:            document.getElementById('siteName')?.value || '',
             siteAddress:         document.getElementById('siteAddress')?.value || '',
             testDate:            document.getElementById('testDate')?.value || '',
             engineerName:        document.getElementById('engineerName')?.value || '',
             testKitRef:          document.getElementById('testKitRef')?.value || '',
             jobReference:        document.getElementById('jobReference')?.value || '',
-            siteStaffName:       document.getElementById('siteStaffName')?.value || '',
-            siteStaffSignature:  window.siteStaffSignature?.signatureData || null,
             generalComments:     document.getElementById('generalComments')?.value || '',
             finalComments:       document.getElementById('finalComments')?.value || '',
             structureHeight:     document.getElementById('structureHeight')?.value || '',
@@ -103,6 +93,7 @@ function saveFormData() {
             systemDetails:       systemDetails,
             uploadedImages:      uploadedImages,
             selectedRecommendations: window.selectedRecommendations || [],
+            ...(typeof window.getClientSignatureData === 'function' ? window.getClientSignatureData() : {}),
             savedAt:             new Date().toISOString()
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -120,8 +111,8 @@ function restoreFormData() {
         const d = JSON.parse(raw);
 
         const fields = [
-            'siteAddress','testDate','engineerName','testKitRef','jobReference',
-            'siteStaffName','generalComments','finalComments','structureHeight',
+            'siteName','siteAddress','testDate','engineerName','testKitRef','jobReference',
+            'generalComments','finalComments','structureHeight',
             'structurePerimeter','structureUse','structureOccupancy','structureAge',
             'previousInspections','earthArrangement','mainEquipotentialBond',
             'surgeInstalled','surgeType','surgeSafe','numEarths'
@@ -129,14 +120,6 @@ function restoreFormData() {
         fields.forEach(id => setFieldValue(id, d[id]));
 
         // Signature
-        if (d.siteStaffSignature && window.siteStaffSignature) {
-            window.siteStaffSignature.signatureData = d.siteStaffSignature;
-            window.siteStaffSignature.updateStatus('Signature restored');
-            if (typeof window.siteStaffSignature.redraw === 'function') {
-                window.siteStaffSignature.redraw();
-            }
-        }
-
         // Checkbox
         const cb = document.getElementById('partOfLargerSystem');
         if (cb && d.partOfLargerSystem !== undefined) cb.checked = d.partOfLargerSystem;
@@ -250,7 +233,12 @@ function restoreFormData() {
             }, 600);
         }
         
-                setTimeout(() => { isRestoring = false; saveFormData(); }, 2000);
+                // Restore client signature
+        if (typeof window.restoreClientSignature === 'function') {
+            window.restoreClientSignature({ clientSignatureData: d.clientSignatureData, clientSignatureName: d.clientSignatureName });
+        }
+
+        setTimeout(() => { isRestoring = false; saveFormData(); }, 2000);
     } catch (e) {
         console.error('Restore failed:', e);
         isRestoring = false;
@@ -273,7 +261,6 @@ function clearAllData() {
     systemDetails = {};
     window.systemDetails = {};
 
-    if (window.siteStaffSignature) window.siteStaffSignature.clear();
 
     document.querySelectorAll('input:not([type="file"]):not([type="checkbox"]), textarea, select').forEach(el => el.value = '');
     document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
@@ -294,6 +281,13 @@ function clearAllData() {
         if (el) el.textContent = id.includes('building') ? 'Click to upload building image' : 'Click to upload earth test images';
     });
     renderSelectedRecs();
+    if (typeof window.restoreClientSignature === 'function') {
+        window.restoreClientSignature({ clientSignatureData: null, clientSignatureName: '' });
+    }
+    const ind = document.getElementById('sigSavedIndicator');
+    if (ind) ind.style.display = 'none';
+    const btn = document.getElementById('btnOpenSigModal');
+    if (btn) btn.textContent = '✍️ Add Client Signature';
     const dateField = document.getElementById('testDate');
     if (dateField) dateField.value = new Date().toISOString().split('T')[0];
 }
@@ -527,14 +521,16 @@ function handleFailureImage(index, input) {
     const file = input.files[0];
     const preview = document.getElementById(`failureImagePreview${index}`);
     if (preview) preview.textContent = 'Processing image...';
-    fixImageOrientation(file).then(corrected => {
-        if (selectedFailuresList[index]) {
-            selectedFailuresList[index].image = file;
-            selectedFailuresList[index].imageData = corrected;
-        }
-        if (preview) preview.textContent = 'Image uploaded';
-        debouncedSave();
-    }).catch(() => {
+    fixImageOrientation(file).then(corrected =>
+        compressImage(corrected, 800, 800, 0.65).then(compressed => {
+            if (selectedFailuresList[index]) {
+                selectedFailuresList[index].image = file;
+                selectedFailuresList[index].imageData = compressed;
+            }
+            if (preview) preview.textContent = 'Image uploaded';
+            debouncedSave();
+        })
+    ).catch(() => {
         const reader = new FileReader();
         reader.onload = e => { if (selectedFailuresList[index]) selectedFailuresList[index].imageData = e.target.result; };
         reader.readAsDataURL(file);
