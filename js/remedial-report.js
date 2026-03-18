@@ -377,11 +377,10 @@ function initRemedialAutoSave() {
         storageKey: 'splp_remedial_autosave_v1',
         fields: [
             'siteName','jobReference','siteAddress','remedialDate',
-            'remedialEngineer','siteStaffName','additionalRepairs',
+            'remedialEngineer','additionalRepairs',
             'completionNotes','complianceResult'
         ],
         checkboxes: [],
-        signature: 'siteStaffSignature',
         dateFields: ['remedialDate'],
         onSave: () => {
             // Save selected repairs, their qty/earth inputs, and images
@@ -394,10 +393,12 @@ function initRemedialAutoSave() {
                     if (earthEl) repairInputs['earth-' + r.id] = earthEl.value;
                 }
             });
+            const sigData = typeof window.getClientSignatureData === 'function' ? window.getClientSignatureData() : {};
             return {
                 _selectedRepairs: window.selectedRepairs,
                 _repairInputs:    repairInputs,
-                _imageStore:      window.imageStore || {}
+                _imageStore:      window.imageStore || {},
+                ...sigData
             };
         },
         onRestore: (d) => {
@@ -444,6 +445,9 @@ function initRemedialAutoSave() {
 
                 renderSelectedRepairs();
             }
+            if (typeof window.restoreClientSignature === 'function') {
+                window.restoreClientSignature({ clientSignatureData: d.clientSignatureData, clientSignatureName: d.clientSignatureName });
+            }
             if (typeof updateAllDots === 'function') setTimeout(updateAllDots, 200);
         },
         clearExtra: () => {
@@ -463,6 +467,13 @@ function initRemedialAutoSave() {
                 if (prev) prev.textContent = '';
             });
             renderSelectedRepairs();
+            if (typeof window.restoreClientSignature === 'function') {
+                window.restoreClientSignature({ clientSignatureData: null, clientSignatureName: '' });
+            }
+            const ind = document.getElementById('sigSavedIndicator');
+            if (ind) ind.style.display = 'none';
+            const btn = document.getElementById('btnOpenSigModal');
+            if (btn) btn.textContent = '✍️ Add Client Signature';
             const bp = document.getElementById('buildingImagePreview');
             if (bp) bp.textContent = 'Click to upload building photo';
             if (typeof updateAllDots === 'function') updateAllDots();
