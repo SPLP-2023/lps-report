@@ -110,8 +110,8 @@ function rmFormatDateShort(dateStr) {
 // Exact T&I order: narrow navy bar → logo centred → building photo → site name/address → title card → info table → footer
 
 function rmBuildCoverPage(pdf, data) {
-    const { siteName, siteAddress, remedialDate, remedialEngineer, siteStaffName,
-            signatureData, buildingImage, jobReference } = data;
+    const { siteName, siteAddress, remedialDate, remedialEngineer,
+            clientSignatureName, clientSignatureData, buildingImage, jobReference } = data;
 
     // Thin top navy bar
     pdf.setFillColor(...RM_NAVY);
@@ -127,12 +127,12 @@ function rmBuildCoverPage(pdf, data) {
     } catch (e) { y += 56; }
 
     // Building image — same T&I call
+    // Fixed reserved height for building image — layout always consistent
+    const IMG_RESERVED = 70;
     if (buildingImage) {
-        try {
-            const imgH = rmAddImageToPDF(pdf, buildingImage, RM_MARGIN, y, RM_PAGE_W - RM_MARGIN * 2, 65, true);
-            y += imgH + 6;
-        } catch (e) { y += 6; }
+        try { rmAddImageToPDF(pdf, buildingImage, RM_MARGIN, y, RM_PAGE_W - RM_MARGIN * 2, IMG_RESERVED, true); } catch(e) {}
     }
+    y += IMG_RESERVED + 4;
 
     // Site name + address block (below image — same as T&I)
     const cardX = RM_MARGIN;
@@ -209,15 +209,15 @@ function rmBuildCoverPage(pdf, data) {
     infoField('Job Reference',     jobReference,       col1X, y);
     infoField('Date',              rmFormatDate(remedialDate), col2X, y);
     infoField('Remedial Engineer', remedialEngineer,   col1X, y + rowH);
-    infoField('Site Staff',        siteStaffName,      col2X, y + rowH);
+    infoField('Site Staff',        clientSignatureName || '', col2X, y + rowH);
 
     // Row 3: signature
     pdf.setFontSize(7);
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(...labelColor);
     pdf.text('SITE STAFF SIGNATURE', col2X, y + rowH * 2 + 4);
-    if (signatureData) {
-        try { pdf.addImage(signatureData, 'PNG', col2X, y + rowH * 2 + 5, 50, 11); } catch(e) {}
+    if (clientSignatureData) {
+        try { pdf.addImage(clientSignatureData, 'PNG', col2X, y + rowH * 2 + 5, 50, 11); } catch(e) {}
     }
     pdf.setTextColor(0, 0, 0);
 
@@ -434,7 +434,6 @@ function generateRemedialPDF() {
     const siteAddress      = document.getElementById('siteAddress')?.value || '';
     const remedialDate     = document.getElementById('remedialDate')?.value || '';
     const remedialEngineer = document.getElementById('remedialEngineer')?.value || '';
-    const siteStaffName    = document.getElementById('siteStaffName')?.value || '';
     const additionalRepairs  = document.getElementById('additionalRepairs')?.value || '';
     const completionNotes    = document.getElementById('completionNotes')?.value || '';
     const complianceResult   = document.getElementById('complianceResult')?.value || '';
@@ -456,9 +455,10 @@ function generateRemedialPDF() {
     });
 
     const data = {
-        siteName, jobReference, siteAddress, remedialDate, remedialEngineer, siteStaffName,
+        siteName, jobReference, siteAddress, remedialDate, remedialEngineer,
         additionalRepairs, completionNotes, complianceResult,
-        signatureData:   window.siteStaffSignature ? window.siteStaffSignature.getSignatureData() : null,
+        clientSignatureName: typeof window.getClientSignatureData === 'function' ? window.getClientSignatureData().clientSignatureName : '',
+        clientSignatureData: typeof window.getClientSignatureData === 'function' ? window.getClientSignatureData().clientSignatureData : null,
         buildingImage:   window.imageStore['building'] || null,
         selectedRepairs: window.selectedRepairs || [],
         repairImages,
