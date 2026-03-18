@@ -202,7 +202,7 @@ function drawTable(pdf, rows, x, y, w) {
 // ===================== COVER PAGE =====================
 
 function buildCoverPage(pdf, data) {
-    const { siteName, siteAddress, testDate, engineerName, testKitRef, jobReference, siteStaffName, siteStaffSignature, standard } = data;
+    const { siteName, siteAddress, testDate, engineerName, testKitRef, jobReference, clientSignatureName, clientSignatureData, standard } = data;
 
     // Top navy bar
     pdf.setFillColor(...NAVY);
@@ -218,12 +218,12 @@ function buildCoverPage(pdf, data) {
     } catch (e) { logoY += 56; }
 
     // Building image
+    // Fixed reserved height for building image — layout always consistent
+    const IMG_RESERVED = 70;
     if (data.buildingImage) {
-        try {
-            const imgH = addImageToPDF(pdf, data.buildingImage, MARGIN, logoY, PAGE_W - MARGIN * 2, 65, true);
-            logoY += imgH + 6;
-        } catch (e) { logoY += 6; }
+        try { addImageToPDF(pdf, data.buildingImage, MARGIN, logoY, PAGE_W - MARGIN * 2, IMG_RESERVED, true); } catch(e) {}
     }
+    logoY += IMG_RESERVED + 4;
 
     // Site Name + Address block
     const cardX = MARGIN;
@@ -297,7 +297,7 @@ function buildCoverPage(pdf, data) {
     const tableRows = [
         [['Job Reference', jobReference], ['Date', formatDate(testDate)]],
         [['Engineer',      engineerName], ['Test Kit Ref', testKitRef]],
-        [['Site Staff',    siteStaffName], null],
+        [['Site Staff',    clientSignatureName || ''], null],
     ];
 
     let iy = logoY;
@@ -315,8 +315,8 @@ function buildCoverPage(pdf, data) {
             pdf.setFont(undefined, 'normal');
             pdf.setTextColor(...labelColor);
             pdf.text('SITE STAFF SIGNATURE', col2X, iy + 4);
-            if (siteStaffSignature) {
-                try { pdf.addImage(siteStaffSignature, 'PNG', col2X, iy + 5, 50, 11); } catch(e) {}
+            if (clientSignatureData) {
+                try { pdf.addImage(clientSignatureData, 'PNG', col2X, iy + 5, 50, 11); } catch(e) {}
             }
         } else {
             infoField(row[1][0], row[1][1], col2X, iy);
@@ -829,8 +829,6 @@ async function generatePDF() {
     const engineerName       = document.getElementById('engineerName')?.value || '';
     const testKitRef         = document.getElementById('testKitRef')?.value || '';
     const jobReference       = document.getElementById('jobReference')?.value || '';
-    const siteStaffName      = document.getElementById('siteStaffName')?.value || '';
-    const siteStaffSignature = window.siteStaffSignature?.signatureData || null;
     const standard           = document.getElementById('standard')?.value || '';
     const finalComments      = document.getElementById('finalComments')?.value || '';
     // Recommendations — from catalogue picker (replaces generalComments textarea)
@@ -859,7 +857,9 @@ async function generatePDF() {
 
     const coverData = {
         siteName, siteAddress, testDate, engineerName, testKitRef, jobReference,
-        siteStaffName, siteStaffSignature, standard, buildingImage
+        clientSignatureName: typeof window.getClientSignatureData === 'function' ? window.getClientSignatureData().clientSignatureName : '',
+        clientSignatureData: typeof window.getClientSignatureData === 'function' ? window.getClientSignatureData().clientSignatureData : null,
+        standard, buildingImage
     };
 
     const summaryData = {
