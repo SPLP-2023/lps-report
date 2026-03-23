@@ -1,5 +1,5 @@
 // StrikeR Service Worker
-const CACHE_NAME = 'striker-ti-v3.1.3';
+const CACHE_NAME = 'striker-ti-v3.1.4';
 const ASSETS = [
     './',
     './index.html',
