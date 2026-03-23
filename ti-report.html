@@ -154,6 +154,7 @@
             <div class="form-group">
                 <label>3. Ground Type:</label>
                 <div id="groundTypeList" class="failures-list">
+                    <div class="failure-option" onclick="selectSystemDetail('groundType','Gravel',this)">Gravel</div>
                     <div class="failure-option" onclick="selectSystemDetail('groundType','Tarmac',this)">Tarmac</div>
                     <div class="failure-option" onclick="selectSystemDetail('groundType','Concrete',this)">Concrete</div>
                     <div class="failure-option" onclick="selectSystemDetail('groundType','Grass',this)">Grass</div>
@@ -216,25 +217,74 @@
                 <label for="structureUse">7. Structure Use:</label>
                 <select id="structureUse">
                     <option value="">Select structure use...</option>
-                    <option>Airport building</option><option>Base station</option>
-                    <option>Block of flats</option><option>Cathedral</option>
-                    <option>Church</option><option>Civic building</option>
-                    <option>Commercial/office block</option><option>Community centre</option>
-                    <option>Departmental store</option><option>Factory</option>
-                    <option>Farm building</option><option>Fuel/service station</option>
-                    <option>Gas compound</option><option>Halls of residence</option>
-                    <option>Hospital</option><option>Hotel</option>
-                    <option>Industrial warehouse</option><option>Large house</option>
-                    <option>Leisure centre</option><option>Medical centre</option>
-                    <option>Museum</option><option>Oil refinery/chemical plant</option>
-                    <option>Old persons/children's home</option>
-                    <option>Police/fire/ambulance station</option><option>Power station</option>
-                    <option>Prison</option><option>Railway station</option>
-                    <option>Ruin</option><option>School</option>
-                    <option>Shops/shopping centre</option><option>Sports stadium</option>
-                    <option>Substation</option><option>Telephone exchange</option>
-                    <option>Theatre</option><option>University</option>
-                    <option>Water treatment works</option><option>Wind farm</option>
+                    <optgroup label="Residential">
+                        <option>Block of flats</option>
+                        <option>Large house</option>
+                        <option>Halls of residence</option>
+                        <option>Old persons / children's home</option>
+                    </optgroup>
+                    <optgroup label="Commercial">
+                        <option>Commercial / office block</option>
+                        <option>Departmental store</option>
+                        <option>Shops / shopping centre</option>
+                        <option>Hotel</option>
+                        <option>Restaurant / café</option>
+                        <option>Bank / financial institution</option>
+                    </optgroup>
+                    <optgroup label="Leisure & Entertainment">
+                        <option>Leisure centre</option>
+                        <option>Sports stadium</option>
+                        <option>Theatre</option>
+                        <option>Museum</option>
+                        <option>Cinema / entertainment venue</option>
+                        <option>Trampoline / activity park</option>
+                        <option>Gym / fitness centre</option>
+                        <option>Golf club / clubhouse</option>
+                    </optgroup>
+                    <optgroup label="Education & Public">
+                        <option>School</option>
+                        <option>University</option>
+                        <option>Civic building</option>
+                        <option>Community centre</option>
+                        <option>Library</option>
+                        <option>Police / fire / ambulance station</option>
+                        <option>Prison</option>
+                        <option>Court building</option>
+                    </optgroup>
+                    <optgroup label="Healthcare">
+                        <option>Hospital</option>
+                        <option>Medical centre</option>
+                    </optgroup>
+                    <optgroup label="Religious">
+                        <option>Church</option>
+                        <option>Cathedral</option>
+                        <option>Mosque / temple / place of worship</option>
+                    </optgroup>
+                    <optgroup label="Industrial & Utilities">
+                        <option>Factory</option>
+                        <option>Industrial warehouse</option>
+                        <option>Oil refinery / chemical plant</option>
+                        <option>Gas compound</option>
+                        <option>Fuel / service station</option>
+                        <option>Power station</option>
+                        <option>Substation</option>
+                        <option>Water treatment works</option>
+                        <option>Wind farm</option>
+                        <option>Data centre</option>
+                    </optgroup>
+                    <optgroup label="Transport & Infrastructure">
+                        <option>Airport building</option>
+                        <option>Railway station</option>
+                        <option>Telephone exchange</option>
+                        <option>Base station / telecoms mast</option>
+                    </optgroup>
+                    <optgroup label="Agriculture">
+                        <option>Farm building</option>
+                    </optgroup>
+                    <optgroup label="Other">
+                        <option>Ruin</option>
+                        <option>Other</option>
+                    </optgroup>
                 </select>
             </div>
             <div class="form-group">
