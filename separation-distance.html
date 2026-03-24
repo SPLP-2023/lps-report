@@ -11,7 +11,6 @@
     <meta name="apple-mobile-web-app-title" content="StrikeR">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <style>
-        /* ── Calculation card ── */
         .calc-card {
             background: white;
             border: 1.5px solid #dee2e6;
@@ -28,131 +27,68 @@
             padding: 11px 16px;
             gap: 10px;
         }
-        .calc-card-title {
-            color: white;
-            font-weight: 700;
-            font-size: 1em;
-        }
-        .calc-card-body {
-            padding: 16px;
-        }
+        .calc-card-title { color: white; font-weight: 700; font-size: 1em; }
+        .calc-card-body  { padding: 16px; }
         .calc-delete-btn {
             background: rgba(255,255,255,0.15);
             border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            border-radius: 5px;
-            padding: 4px 10px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: background 0.2s;
-            flex-shrink: 0;
+            color: white; border-radius: 5px; padding: 4px 10px;
+            cursor: pointer; font-size: 13px; transition: background 0.2s; flex-shrink: 0;
         }
-        .calc-delete-btn:hover {
-            background: rgba(220,53,69,0.7);
-            transform: none;
-        }
+        .calc-delete-btn:hover { background: rgba(220,53,69,0.7); transform: none; }
 
-        /* ── Result pill ── */
         .result-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 14px;
-            padding: 10px 18px;
-            border-radius: 8px;
-            background: #e8f4fd;
-            border: 1.5px solid #0877c3;
-            font-size: 1em;
+            display: inline-flex; align-items: center; gap: 10px;
+            margin-top: 14px; padding: 10px 18px; border-radius: 8px;
+            background: #e8f4fd; border: 1.5px solid #0877c3;
         }
-        .result-pill .result-value {
-            font-size: 1.5em;
-            font-weight: 700;
-            color: #0d1b2a;
-        }
-        .result-pill .result-label {
-            color: #555;
-            font-size: 0.88em;
-        }
+        .result-value { font-size: 1.5em; font-weight: 700; color: #0d1b2a; }
+        .result-label { color: #555; font-size: 0.88em; display: block; margin-bottom: 2px; }
+
         .compliance-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 5px;
-            font-weight: 700;
-            font-size: 0.9em;
-            margin-left: 6px;
+            display: inline-block; padding: 4px 12px; border-radius: 5px;
+            font-weight: 700; font-size: 0.9em; margin-left: 8px;
         }
-        .badge-pass {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #28a745;
-        }
-        .badge-fail {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #dc3545;
-        }
+        .badge-pass { background:#d4edda; color:#155724; border:1px solid #28a745; }
+        .badge-fail { background:#f8d7da; color:#721c24; border:1px solid #dc3545; }
 
-        /* ── Coefficient display row ── */
-        .coeff-row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
+        .coeff-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
         .coeff-chip {
-            background: #f0f4f8;
-            border: 1px solid #cdd5df;
-            border-radius: 5px;
-            padding: 4px 10px;
-            font-size: 12px;
-            color: #495057;
+            background:#f0f4f8; border:1px solid #cdd5df; border-radius:5px;
+            padding:4px 9px; font-size:12px; color:#495057;
         }
-        .coeff-chip span {
-            font-weight: 700;
-            color: #0877c3;
+        .coeff-chip span { font-weight:700; color:#0877c3; }
+
+        .annex-panel {
+            background:#f8f9fa; border:1px solid #dee2e6;
+            border-radius:6px; padding:12px; margin-top:6px;
         }
-
-        /* ── Detailed kc field visibility ── */
-        .kc-simplified { display: block; }
-        .kc-detailed   { display: none;  }
-
-        /* ── Add calculation button ── */
+        .warn-note {
+            background:#fff3cd; border-left:3px solid #ffc107;
+            border-radius:0 5px 5px 0; padding:7px 11px;
+            font-size:12px; color:#856404; margin-top:6px;
+        }
+        .info-note {
+            background:#f0f8ff; border-left:3px solid #0877c3;
+            border-radius:0 5px 5px 0; padding:7px 11px;
+            font-size:12px; color:#444; margin-bottom:10px; line-height:1.5;
+        }
+        .kc-computed {
+            display:inline-block; background:#e8f4fd;
+            border:1.5px solid #0877c3; border-radius:6px;
+            padding:5px 14px; font-size:13px; font-weight:700;
+            color:#0d1b2a; margin-top:8px;
+        }
         .add-calc-btn {
             background: linear-gradient(135deg, #0d1b2a 0%, #0877c3 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 80px;
-            transition: filter 0.2s;
+            color:white; border:none; border-radius:8px; padding:12px 24px;
+            font-size:15px; font-weight:600; cursor:pointer; width:100%;
+            margin-bottom:80px; transition:filter 0.2s;
         }
-        .add-calc-btn:hover {
-            filter: brightness(1.12);
-            transform: none;
-        }
-
-        /* ── Info note ── */
-        .info-note {
-            background: #f0f8ff;
-            border-left: 3px solid #0877c3;
-            border-radius: 0 5px 5px 0;
-            padding: 8px 12px;
-            font-size: 12px;
-            color: #555;
-            margin-top: 6px;
-        }
-
-        /* ── Empty state ── */
-        .no-calcs {
-            text-align: center;
-            padding: 40px 20px;
-            color: #aaa;
-            font-style: italic;
-        }
+        .add-calc-btn:hover { filter:brightness(1.12); transform:none; }
+        .no-calcs { text-align:center; padding:40px 20px; color:#aaa; font-style:italic; }
+        .sub-label { font-size:12px; color:#6c757d; font-weight:normal; margin-left:4px; }
+        .incomplete-note { color:#aaa; font-style:italic; font-size:13px; margin-top:12px; }
     </style>
 </head>
 <body>
@@ -199,9 +135,12 @@
     <div class="section expanded" id="sec-calcs">
         <button class="section-header" onclick="toggleSection('sec-calcs')">
             <span class="section-title">📐 Calculations</span>
-            <span class="section-right"><span class="status-dot dot-filled" id="dot-sec-calcs"></span><span class="chevron">▾</span></span>
+            <span class="section-right">
+                <span class="status-dot dot-filled" id="dot-sec-calcs"></span>
+                <span class="chevron" style="transform:rotate(180deg)">▾</span>
+            </span>
         </button>
-        <div class="section-body open" id="calc-section-body">
+        <div class="section-body open">
             <div id="calc-cards-container">
                 <div class="no-calcs" id="no-calcs-msg">No calculations yet. Use the button below to add one.</div>
             </div>
@@ -210,19 +149,17 @@
 
     <button class="add-calc-btn" onclick="addCalcCard()">+ Add Calculation</button>
 
-    <!-- ===================== STICKY FOOTER ===================== -->
     <div class="sticky-generate">
         <button onclick="generateSDPDF()">📄 Generate PDF Report</button>
     </div>
 
 </div>
 
-<!-- ===================== SCRIPTS ===================== -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="js/sd-pdf.js"></script>
 
 <script>
-// ── Branding preload (same pattern as T&I / Remedial) ──
+// ── Branding preload ──
 async function blobToBase64(blob) {
     return new Promise(resolve => {
         const reader = new FileReader();
@@ -238,15 +175,13 @@ async function preloadBrandingImages() {
         ]);
         window._logoBase64   = await blobToBase64(logoBlob);
         window._footerBase64 = await blobToBase64(footerBlob);
-    } catch(e) {
-        console.error('Failed to preload branding images:', e);
-    }
+    } catch(e) { console.error('Failed to preload branding images:', e); }
 }
 preloadBrandingImages();
 </script>
 
 <script>
-// ── Section toggle (same pattern as all other reports) ──
+// ── Section toggle ──
 function toggleSection(id) {
     const section = document.getElementById(id);
     const body    = section.querySelector('.section-body');
@@ -256,35 +191,23 @@ function toggleSection(id) {
     section.classList.toggle('expanded', !isOpen);
     if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
-
-// Open site section chevron state on load
-document.addEventListener('DOMContentLoaded', () => {
-    // calcs section starts open
-    const calcChevron = document.querySelector('#sec-calcs .chevron');
-    if (calcChevron) calcChevron.style.transform = 'rotate(180deg)';
-});
 </script>
 
 <script>
-// ── Coefficient lookup tables (BS EN 62305-3:2011 / :2024 Cl.6.3) ──
-const KI = { 'I': 0.08, 'II': 0.06, 'III': 0.04, 'IV': 0.04 };
-const KM = { 'air': 1.0, 'solid': 0.5 };
-const KC_SIMPLIFIED = { '1': 1.0, '2': 0.66, '3': 0.44 };
+// ─────────────────────────────────────────────────────────────────────────────
+// BS EN IEC 62305-3:2024 coefficient tables
+// ─────────────────────────────────────────────────────────────────────────────
+const KI            = { 'I':0.08, 'II':0.06, 'III':0.04, 'IV':0.04 };
+const KM            = { 'air':1.0, 'solid':0.5 };
+const KC_SIMPLIFIED = { '1':1.0, '2':0.66, '3':0.44 };
 
 let calcCounter = 0;
 
-function addCalcCard() {
-    calcCounter++;
-    const id = calcCounter;
-
-    const noMsg = document.getElementById('no-calcs-msg');
-    if (noMsg) noMsg.remove();
-
-    const container = document.getElementById('calc-cards-container');
-    const card = document.createElement('div');
-    card.className = 'calc-card';
-    card.id = 'calc-card-' + id;
-    card.innerHTML = `
+// ─────────────────────────────────────────────────────────────────────────────
+// Build card HTML
+// ─────────────────────────────────────────────────────────────────────────────
+function buildCardHTML(id) {
+    return `
         <div class="calc-card-header">
             <span class="calc-card-title">Calculation ${id}</span>
             <button class="calc-delete-btn" onclick="deleteCalcCard(${id})">✕ Remove</button>
@@ -293,7 +216,8 @@ function addCalcCard() {
 
             <div class="form-group">
                 <label for="desc-${id}">Description / Location:</label>
-                <input type="text" id="desc-${id}" placeholder="e.g. Down conductor at north elevation window..."
+                <input type="text" id="desc-${id}"
+                    placeholder="e.g. Down conductor at north elevation window..."
                     oninput="recalc(${id})">
             </div>
 
@@ -313,59 +237,204 @@ function addCalcCard() {
                     <select id="material-${id}" onchange="recalc(${id})">
                         <option value="">Select...</option>
                         <option value="air">Air (km = 1.0)</option>
-                        <option value="solid">Concrete, Brick or Wood (km = 0.5)</option>
+                        <option value="solid">Concrete, Bricks or Wood (km = 0.5)</option>
                     </select>
                 </div>
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="approach-${id}">Calculation Approach:</label>
-                    <select id="approach-${id}" onchange="onApproachChange(${id})">
-                        <option value="simplified">Simplified (Cl. 6.3.2)</option>
-                        <option value="detailed">Detailed (Cl. 6.3.3 / Annex C)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="length-${id}">Length <em>l</em> (m):</label>
-                    <input type="number" id="length-${id}" min="0" step="0.1" placeholder="0.0"
-                        oninput="recalc(${id})">
-                </div>
+            <div class="form-group">
+                <label for="length-${id}">Length <em>l</em>
+                    <span class="sub-label">(along conductor from assessment point to nearest bonding point or earth termination, m)</span>
+                </label>
+                <input type="number" id="length-${id}" min="0" step="0.1" placeholder="0.0" oninput="recalc(${id})">
             </div>
 
-            <!-- Simplified: down-conductor count -->
-            <div class="form-group kc-simplified" id="kc-simp-wrap-${id}">
-                <label for="num-dc-${id}">Number of Down-Conductors:</label>
-                <select id="num-dc-${id}" onchange="recalc(${id})">
-                    <option value="">Select...</option>
-                    <option value="1">1 — isolated LPS (kc = 1.00)</option>
-                    <option value="2">2 (kc = 0.66)</option>
-                    <option value="3">3 or more (kc = 0.44)</option>
+            <div class="form-group">
+                <label for="approach-${id}">kc Approach:</label>
+                <select id="approach-${id}" onchange="onApproachChange(${id})">
+                    <option value="simplified">Simplified — Table 13 (Cl. 6.3.2)</option>
+                    <option value="detailed">Detailed — Annex B (Cl. 6.3.1)</option>
                 </select>
             </div>
 
-            <!-- Detailed: manual kc entry -->
-            <div class="form-group kc-detailed" id="kc-det-wrap-${id}">
-                <label for="kc-manual-${id}">kc value (from Annex C figures):</label>
-                <input type="number" id="kc-manual-${id}" min="0" max="1" step="0.01" placeholder="e.g. 0.52"
-                    oninput="recalc(${id})">
-                <div class="info-note">
-                    Determine kc from Figures C.1–C.5 of BS EN 62305-3 based on the geometry of the air-termination and down-conductor arrangement.
+            <!-- ── Simplified panel ── -->
+            <div id="simp-panel-${id}">
+                <div class="form-group">
+                    <label for="num-dc-${id}">Number of Down-Conductors:</label>
+                    <select id="num-dc-${id}" onchange="recalc(${id})">
+                        <option value="">Select...</option>
+                        <option value="1">1 — isolated LPS (kc = 1.00)</option>
+                        <option value="2">2 (kc = 0.66)</option>
+                        <option value="3">3 or more (kc = 0.44)</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Optional: measured actual distance -->
-            <div class="form-group" style="margin-top:6px;">
-                <label for="actual-${id}">Actual Distance Available (mm) — optional:</label>
-                <input type="number" id="actual-${id}" min="0" step="1" placeholder="Enter measured distance to check compliance..."
-                    oninput="recalc(${id})">
+            <!-- ── Detailed panel ── -->
+            <div id="det-wrap-${id}" style="display:none;">
+                <div class="annex-panel">
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label for="annex-fig-${id}">Annex B Figure (BS EN IEC 62305-3:2024):</label>
+                        <select id="annex-fig-${id}" onchange="onAnnexFigChange(${id})">
+                            <option value="">Select figure...</option>
+                            <option value="B1">Figure B.1 — Wire air-termination system</option>
+                            <option value="B2">Figure B.2 — Multiple down-conductors with ring conductors</option>
+                            <option value="B3">Figure B.3 — Multiple interconnecting ring levels</option>
+                            <option value="B4">Figure B.4 — Meshed air-termination system (manual)</option>
+                        </select>
+                    </div>
+
+                    <!-- ── Figure B.1: Wire AT — kc = (h+c)/(2h+c) ── -->
+                    <div id="fig-b1-${id}" style="display:none;">
+                        <div class="info-note">
+                            <strong>Figure B.1 — Wire air-termination system</strong><br>
+                            Also applicable to sloped roofs with AT on the ridge.<br>
+                            Formula: kc = (h + c) / (2h + c)<br>
+                            <em>h</em> = height of masts / DC length to nearest bonding point or earth (m)<br>
+                            <em>c</em> = distance between the two down-conductors (m)
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>h <span class="sub-label">(m)</span></label>
+                                <input type="number" id="b1-h-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                            </div>
+                            <div class="form-group">
+                                <label>c <span class="sub-label">(m)</span></label>
+                                <input type="number" id="b1-c-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                            </div>
+                        </div>
+                        <div id="b1-kc-${id}"></div>
+                    </div>
+
+                    <!-- ── Figure B.2: Multiple DCs — kc = 1/(2n) + 0.1 + 0.2 × ∛(c/h) ── -->
+                    <div id="fig-b2-${id}" style="display:none;">
+                        <div class="info-note">
+                            <strong>Figure B.2 — Multiple down-conductor system</strong><br>
+                            Formula: kc = 1/(2n) + 0.1 + 0.2 &times; &#8731;(c/h)<br>
+                            Valid for cubic structures, n &ge; 4, h and c in range 3–20 m.<br>
+                            <em>n</em> = total number of down-conductors (include internal DCs)<br>
+                            <em>c</em> = distance from a DC to the next DC (m)<br>
+                            <em>h</em> = spacing (height) between ring conductors (m)
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>n <span class="sub-label">(total DCs)</span></label>
+                                <input type="number" id="b2-n-${id}" min="1" step="1" placeholder="e.g. 6" oninput="recalc(${id})">
+                            </div>
+                            <div class="form-group">
+                                <label>h <span class="sub-label">(ring spacing, m)</span></label>
+                                <input type="number" id="b2-h-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                            </div>
+                            <div class="form-group">
+                                <label>c <span class="sub-label">(DC spacing, m)</span></label>
+                                <input type="number" id="b2-c-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                            </div>
+                        </div>
+                        <div id="b2-warn-${id}"></div>
+                        <div id="b2-kc-${id}"></div>
+                    </div>
+
+                    <!-- ── Figure B.3: Multiple ring levels ── -->
+                    <div id="fig-b3-${id}" style="display:none;">
+                        <div class="info-note">
+                            <strong>Figure B.3 — Multiple DCs with interconnecting ring at each level</strong><br>
+                            kc depends on which level the assessment point is at:<br>
+                            &bull; Top (kc1): 1/(2n) + 0.1 + 0.2 &times; &#8731;(c/h&#8321;)<br>
+                            &bull; Level 2 (kc2): 1/n + 0.1<br>
+                            &bull; Level 3 (kc3): 1/n + 0.01<br>
+                            &bull; Level 4 and below (kc4+): 1/n<br>
+                            <em>n</em> = total number of down-conductors (include internal DCs)
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>n <span class="sub-label">(total DCs)</span></label>
+                                <input type="number" id="b3-n-${id}" min="1" step="1" placeholder="e.g. 4" oninput="recalc(${id})">
+                            </div>
+                            <div class="form-group">
+                                <label>Assessment level:</label>
+                                <select id="b3-level-${id}" onchange="onB3LevelChange(${id})">
+                                    <option value="">Select level...</option>
+                                    <option value="top">Top level (kc1)</option>
+                                    <option value="L2">Level 2 (kc2)</option>
+                                    <option value="L3">Level 3 (kc3)</option>
+                                    <option value="L4">Level 4 and below (kc4+)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Top level needs c and h₁ -->
+                        <div id="b3-top-inputs-${id}" style="display:none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>h&#8321; <span class="sub-label">(ring spacing at top level, m)</span></label>
+                                    <input type="number" id="b3-h-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                                </div>
+                                <div class="form-group">
+                                    <label>c <span class="sub-label">(DC spacing, m)</span></label>
+                                    <input type="number" id="b3-c-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                                </div>
+                            </div>
+                        </div>
+                        <div id="b3-kc-${id}"></div>
+                    </div>
+
+                    <!-- ── Figure B.4: Meshed AT — manual kc ── -->
+                    <div id="fig-b4-${id}" style="display:none;">
+                        <div class="info-note">
+                            <strong>Figure B.4 — Meshed air-termination system</strong><br>
+                            Determine kc by tracing the current path through the mesh from the strike point
+                            to the down-conductor using the current-division rules in Figure B.4 of
+                            BS EN IEC 62305-3:2024:<br>
+                            &bull; At the injection point: current divides equally into all possible paths<br>
+                            &bull; At each further mesh junction: current reduces by 50%<br>
+                            &bull; At the down-conductor: reduces by 50% again<br>
+                            Minimum kc = 1/n (n = total number of down-conductors)
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>n <span class="sub-label">(total DCs — for minimum kc check)</span></label>
+                                <input type="number" id="b4-n-${id}" min="1" step="1" placeholder="e.g. 24" oninput="recalc(${id})">
+                            </div>
+                            <div class="form-group">
+                                <label>kc <span class="sub-label">(from Figure B.4 current path analysis)</span></label>
+                                <input type="number" id="b4-kc-${id}" min="0" max="1" step="0.001"
+                                    placeholder="e.g. 0.125" oninput="recalc(${id})">
+                            </div>
+                        </div>
+                        <div id="b4-warn-${id}"></div>
+                    </div>
+
+                </div><!-- end annex-panel -->
+            </div><!-- end det-wrap -->
+
+            <!-- ── Optional compliance check ── -->
+            <div class="form-group" style="margin-top:12px;">
+                <label for="actual-${id}">Actual Distance Available
+                    <span class="sub-label">(mm — optional, for PASS/FAIL check)</span>
+                </label>
+                <input type="number" id="actual-${id}" min="0" step="1"
+                    placeholder="Enter measured distance..." oninput="recalc(${id})">
             </div>
 
-            <!-- Live result -->
+            <!-- ── Live result ── -->
             <div id="result-${id}"></div>
 
         </div>
     `;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Card management
+// ─────────────────────────────────────────────────────────────────────────────
+function addCalcCard() {
+    calcCounter++;
+    const id = calcCounter;
+    const noMsg = document.getElementById('no-calcs-msg');
+    if (noMsg) noMsg.remove();
+    const container = document.getElementById('calc-cards-container');
+    const card = document.createElement('div');
+    card.className = 'calc-card';
+    card.id = 'calc-card-' + id;
+    card.innerHTML = buildCardHTML(id);
     container.appendChild(card);
     recalc(id);
 }
@@ -373,7 +442,6 @@ function addCalcCard() {
 function deleteCalcCard(id) {
     const card = document.getElementById('calc-card-' + id);
     if (card) card.remove();
-    // If no cards left, show empty message
     const container = document.getElementById('calc-cards-container');
     if (!container.querySelector('.calc-card')) {
         container.innerHTML = '<div class="no-calcs" id="no-calcs-msg">No calculations yet. Use the button below to add one.</div>';
@@ -381,44 +449,195 @@ function deleteCalcCard(id) {
 }
 
 function onApproachChange(id) {
-    const approach = document.getElementById('approach-' + id).value;
-    document.getElementById('kc-simp-wrap-' + id).style.display = approach === 'simplified' ? 'block' : 'none';
-    document.getElementById('kc-det-wrap-'  + id).style.display = approach === 'detailed'   ? 'block' : 'none';
+    const v = document.getElementById('approach-' + id).value;
+    document.getElementById('simp-panel-' + id).style.display = v === 'simplified' ? 'block' : 'none';
+    document.getElementById('det-wrap-'   + id).style.display = v === 'detailed'   ? 'block' : 'none';
     recalc(id);
 }
 
-function recalc(id) {
-    const lpsClass = document.getElementById('lps-class-' + id).value;
-    const material = document.getElementById('material-'  + id).value;
-    const approach = document.getElementById('approach-'  + id).value;
-    const lVal     = parseFloat(document.getElementById('length-' + id).value);
-    const resultEl = document.getElementById('result-' + id);
+function onAnnexFigChange(id) {
+    const fig = document.getElementById('annex-fig-' + id).value;
+    ['b1','b2','b3','b4'].forEach(f => {
+        const el = document.getElementById('fig-' + f + '-' + id);
+        if (el) el.style.display = (fig === f.toUpperCase()) ? 'block' : 'none';
+    });
+    recalc(id);
+}
 
-    let kc, kcLabel;
+function onB3LevelChange(id) {
+    const level = document.getElementById('b3-level-' + id).value;
+    const topInputs = document.getElementById('b3-top-inputs-' + id);
+    if (topInputs) topInputs.style.display = level === 'top' ? 'block' : 'none';
+    recalc(id);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Annex B kc computation (BS EN IEC 62305-3:2024)
+// Returns { kc, kcLabel, kcSource, kcFormula, warning }
+// ─────────────────────────────────────────────────────────────────────────────
+function computeDetailedKc(id) {
+    const fig = document.getElementById('annex-fig-' + id)?.value;
+    if (!fig) return { kc:null, kcLabel:'—', kcSource:'Annex B (no figure selected)', kcFormula:'', warning:null };
+
+    // ── Figure B.1: kc = (h+c)/(2h+c) ──────────────────────────────────────
+    if (fig === 'B1') {
+        const h = parseFloat(document.getElementById('b1-h-' + id).value);
+        const c = parseFloat(document.getElementById('b1-c-' + id).value);
+        const dispEl = document.getElementById('b1-kc-' + id);
+        if (isNaN(h) || isNaN(c) || h <= 0 || c <= 0) {
+            if (dispEl) dispEl.innerHTML = '';
+            return { kc:null, kcLabel:'—', kcSource:'Figure B.1 — Wire AT', kcFormula:'kc = (h+c)/(2h+c)', warning:null };
+        }
+        const kc = (h + c) / (2 * h + c);
+        if (dispEl) dispEl.innerHTML = `<div class="kc-computed">Computed kc = ${kc.toFixed(3)}</div>`;
+        return {
+            kc, kcLabel: kc.toFixed(3),
+            kcSource: 'Figure B.1 — Wire AT system',
+            kcFormula: `kc = (${h}+${c})/(2×${h}+${c}) = ${kc.toFixed(3)}`,
+            warning: null
+        };
+    }
+
+    // ── Figure B.2: kc = 1/(2n) + 0.1 + 0.2 × ∛(c/h) ──────────────────────
+    if (fig === 'B2') {
+        const n = parseInt(document.getElementById('b2-n-' + id).value);
+        const h = parseFloat(document.getElementById('b2-h-' + id).value);
+        const c = parseFloat(document.getElementById('b2-c-' + id).value);
+        const warnEl = document.getElementById('b2-warn-' + id);
+        const dispEl = document.getElementById('b2-kc-'   + id);
+        if (isNaN(n) || isNaN(h) || isNaN(c) || n <= 0 || h <= 0 || c <= 0) {
+            if (warnEl) warnEl.innerHTML = '';
+            if (dispEl) dispEl.innerHTML = '';
+            return { kc:null, kcLabel:'—', kcSource:'Figure B.2 — Multiple DCs', kcFormula:'kc = 1/(2n) + 0.1 + 0.2×∛(c/h)', warning:null };
+        }
+        const kc = 1 / (2 * n) + 0.1 + 0.2 * Math.cbrt(c / h);
+        const warnings = [];
+        if (n < 4)       warnings.push('n < 4 (formula approximation valid for n ≥ 4)');
+        if (h < 3 || h > 20) warnings.push(`h = ${h} m (valid range 3–20 m)`);
+        if (c < 3 || c > 20) warnings.push(`c = ${c} m (valid range 3–20 m)`);
+        if (warnEl) warnEl.innerHTML = warnings.length
+            ? `<div class="warn-note">⚠ Figure B.2 approximation may be less accurate: ${warnings.join('; ')}.</div>` : '';
+        if (dispEl) dispEl.innerHTML = `<div class="kc-computed">Computed kc = ${kc.toFixed(3)}</div>`;
+        return {
+            kc, kcLabel: kc.toFixed(3),
+            kcSource: 'Figure B.2 — Multiple DC system',
+            kcFormula: `kc = 1/(2×${n}) + 0.1 + 0.2×∛(${c}/${h}) = ${kc.toFixed(3)}`,
+            warning: warnings.length ? warnings.join('; ') : null
+        };
+    }
+
+    // ── Figure B.3: Multiple ring levels ────────────────────────────────────
+    if (fig === 'B3') {
+        const n     = parseInt(document.getElementById('b3-n-'     + id).value);
+        const level = document.getElementById('b3-level-' + id).value;
+        const dispEl = document.getElementById('b3-kc-' + id);
+        if (isNaN(n) || n <= 0 || !level) {
+            if (dispEl) dispEl.innerHTML = '';
+            return { kc:null, kcLabel:'—', kcSource:'Figure B.3 — Multiple ring levels', kcFormula:'', warning:null };
+        }
+
+        let kc, kcFormula, levelLabel;
+
+        if (level === 'top') {
+            const h = parseFloat(document.getElementById('b3-h-' + id).value);
+            const c = parseFloat(document.getElementById('b3-c-' + id).value);
+            if (isNaN(h) || isNaN(c) || h <= 0 || c <= 0) {
+                if (dispEl) dispEl.innerHTML = '';
+                return { kc:null, kcLabel:'—', kcSource:'Figure B.3 — Top level', kcFormula:'kc1 = 1/(2n)+0.1+0.2×∛(c/h₁)', warning:null };
+            }
+            kc = 1 / (2 * n) + 0.1 + 0.2 * Math.cbrt(c / h);
+            kcFormula  = `kc1 = 1/(2×${n})+0.1+0.2×∛(${c}/${h}) = ${kc.toFixed(3)}`;
+            levelLabel = 'Top level (kc1)';
+        } else if (level === 'L2') {
+            kc = 1 / n + 0.1;
+            kcFormula  = `kc2 = 1/${n}+0.1 = ${kc.toFixed(3)}`;
+            levelLabel = 'Level 2 (kc2)';
+        } else if (level === 'L3') {
+            kc = 1 / n + 0.01;
+            kcFormula  = `kc3 = 1/${n}+0.01 = ${kc.toFixed(3)}`;
+            levelLabel = 'Level 3 (kc3)';
+        } else {
+            kc = 1 / n;
+            kcFormula  = `kc4 = 1/${n} = ${kc.toFixed(3)}`;
+            levelLabel = 'Level 4+ (kc4)';
+        }
+
+        if (dispEl) dispEl.innerHTML = `<div class="kc-computed">Computed kc = ${kc.toFixed(3)} <span style="font-size:11px;font-weight:normal;color:#555;">(n=${n}, ${levelLabel})</span></div>`;
+        return {
+            kc, kcLabel: kc.toFixed(3),
+            kcSource: `Figure B.3 — ${levelLabel}`,
+            kcFormula, warning: null
+        };
+    }
+
+    // ── Figure B.4: Meshed AT — manual entry ────────────────────────────────
+    if (fig === 'B4') {
+        const n      = parseInt(document.getElementById('b4-n-'  + id).value);
+        const manual = parseFloat(document.getElementById('b4-kc-' + id).value);
+        const warnEl = document.getElementById('b4-warn-' + id);
+        if (isNaN(manual)) {
+            if (warnEl) warnEl.innerHTML = '';
+            return { kc:null, kcLabel:'—', kcSource:'Figure B.4 — Meshed AT (manual)', kcFormula:'', warning:null };
+        }
+        let warning = null;
+        if (!isNaN(n) && n > 0 && manual < 1 / n) {
+            warning = `kc = ${manual} is less than minimum 1/n = ${(1/n).toFixed(3)} for n=${n}`;
+            if (warnEl) warnEl.innerHTML = `<div class="warn-note">⚠ ${warning}. Per Figure B.4 kc must not be less than 1/n.</div>`;
+        } else {
+            if (warnEl) warnEl.innerHTML = '';
+        }
+        return {
+            kc: manual, kcLabel: manual.toFixed(3),
+            kcSource: 'Figure B.4 — Meshed AT (manual entry)',
+            kcFormula: `kc = ${manual.toFixed(3)} (manual)`,
+            warning
+        };
+    }
+
+    return { kc:null, kcLabel:'—', kcSource:'Annex B', kcFormula:'', warning:null };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Live recalc — updates the result div for a card
+// ─────────────────────────────────────────────────────────────────────────────
+function recalc(id) {
+    const lpsClass = document.getElementById('lps-class-' + id)?.value;
+    const material = document.getElementById('material-'  + id)?.value;
+    const approach = document.getElementById('approach-'  + id)?.value;
+    const lVal     = parseFloat(document.getElementById('length-' + id)?.value);
+    const resultEl = document.getElementById('result-' + id);
+    if (!resultEl) return;
+
+    let kc, kcLabel, kcSource, kcFormula;
+
     if (approach === 'simplified') {
-        const numDC = document.getElementById('num-dc-' + id).value;
-        kc = numDC ? KC_SIMPLIFIED[numDC] : null;
-        kcLabel = kc != null ? kc.toFixed(2) : '—';
+        const numDC = document.getElementById('num-dc-' + id)?.value;
+        kc        = numDC ? KC_SIMPLIFIED[numDC] : null;
+        kcLabel   = kc != null ? kc.toFixed(2) : '—';
+        kcSource  = numDC === '1' ? '1 DC — isolated LPS (Table 13)'
+                  : numDC === '2' ? '2 DCs (Table 13)'
+                  : numDC === '3' ? '3+ DCs (Table 13)' : '-';
+        kcFormula = kc != null ? `kc = ${kcLabel} (Table 13)` : '';
     } else {
-        const manual = parseFloat(document.getElementById('kc-manual-' + id).value);
-        kc = isNaN(manual) ? null : manual;
-        kcLabel = kc != null ? kc.toFixed(2) : '—';
+        const det = computeDetailedKc(id);
+        kc        = det.kc;
+        kcLabel   = det.kcLabel;
+        kcSource  = det.kcSource;
+        kcFormula = det.kcFormula;
     }
 
     const ki = lpsClass ? KI[lpsClass] : null;
     const km = material ? KM[material] : null;
 
-    // Not enough inputs yet
     if (ki == null || km == null || kc == null || isNaN(lVal) || lVal <= 0) {
-        resultEl.innerHTML = '<div style="color:#aaa;font-style:italic;font-size:13px;margin-top:10px;">Complete all fields above to see the result.</div>';
+        resultEl.innerHTML = '<p class="incomplete-note">Complete all fields above to see the result.</p>';
         return;
     }
 
-    const s_m  = (ki / km) * kc * lVal;          // metres
-    const s_mm = Math.round(s_m * 1000);          // millimetres, rounded to nearest mm
+    const s_m  = (ki / km) * kc * lVal;
+    const s_mm = Math.round(s_m * 1000);
 
-    // Compliance check
-    const actualVal = parseFloat(document.getElementById('actual-' + id).value);
+    const actualVal = parseFloat(document.getElementById('actual-' + id)?.value);
     let complianceHTML = '';
     if (!isNaN(actualVal) && actualVal > 0) {
         const pass = actualVal >= s_mm;
@@ -428,8 +647,8 @@ function recalc(id) {
     resultEl.innerHTML = `
         <div class="result-pill">
             <div>
-                <div class="result-label">Required Separation Distance</div>
-                <div><span class="result-value">${s_mm} mm</span>${complianceHTML}</div>
+                <span class="result-label">Required Separation Distance</span>
+                <span class="result-value">${s_mm} mm</span>${complianceHTML}
             </div>
         </div>
         <div class="coeff-row">
@@ -437,12 +656,14 @@ function recalc(id) {
             <div class="coeff-chip">km = <span>${km.toFixed(1)}</span></div>
             <div class="coeff-chip">kc = <span>${kcLabel}</span></div>
             <div class="coeff-chip">l = <span>${lVal.toFixed(1)} m</span></div>
-            <div class="coeff-chip">s = <span>(${ki.toFixed(2)} / ${km.toFixed(1)}) × ${kcLabel} × ${lVal.toFixed(1)} = ${s_mm} mm</span></div>
+            <div class="coeff-chip">s = <span>(${ki.toFixed(2)} ÷ ${km.toFixed(1)}) × ${kcLabel} × ${lVal.toFixed(1)} = ${s_mm} mm</span></div>
         </div>
     `;
 }
 
-// ── PDF generation — delegates to sd-pdf.js ──
+// ─────────────────────────────────────────────────────────────────────────────
+// Collect data and hand off to PDF generator
+// ─────────────────────────────────────────────────────────────────────────────
 function generateSDPDF() {
     const cards = document.querySelectorAll('.calc-card');
     if (!cards.length) {
@@ -457,21 +678,28 @@ function generateSDPDF() {
 
     const calculations = [];
     cards.forEach(card => {
-        const id = card.id.replace('calc-card-', '');
+        const id       = card.id.replace('calc-card-', '');
+        const lpsClass = document.getElementById('lps-class-' + id)?.value || '';
+        const material = document.getElementById('material-'  + id)?.value || '';
+        const approach = document.getElementById('approach-'  + id)?.value || 'simplified';
+        const lVal     = parseFloat(document.getElementById('length-' + id)?.value);
+        const desc     = (document.getElementById('desc-' + id)?.value || '').trim();
 
-        const lpsClass = document.getElementById('lps-class-' + id).value;
-        const material = document.getElementById('material-'  + id).value;
-        const approach = document.getElementById('approach-'  + id).value;
-        const lVal     = parseFloat(document.getElementById('length-' + id).value);
-        const desc     = document.getElementById('desc-' + id).value.trim();
-
-        let kc;
+        let kc, kcLabel, kcSource, kcFormula;
         if (approach === 'simplified') {
-            const numDC = document.getElementById('num-dc-' + id).value;
-            kc = numDC ? KC_SIMPLIFIED[numDC] : null;
+            const numDC = document.getElementById('num-dc-' + id)?.value || '';
+            kc        = numDC ? KC_SIMPLIFIED[numDC] : null;
+            kcLabel   = kc != null ? kc.toFixed(2) : null;
+            kcSource  = numDC === '1' ? '1 DC — isolated LPS (Table 13)'
+                      : numDC === '2' ? '2 DCs (Table 13)'
+                      : numDC === '3' ? '3+ DCs (Table 13)' : '-';
+            kcFormula = kc != null ? `kc = ${kcLabel} (Table 13)` : '';
         } else {
-            const manual = parseFloat(document.getElementById('kc-manual-' + id).value);
-            kc = isNaN(manual) ? null : manual;
+            const det = computeDetailedKc(id);
+            kc        = det.kc;
+            kcLabel   = det.kcLabel;
+            kcSource  = det.kcSource;
+            kcFormula = det.kcFormula;
         }
 
         const ki = lpsClass ? KI[lpsClass] : null;
@@ -482,36 +710,29 @@ function generateSDPDF() {
             s_mm = Math.round((ki / km) * kc * lVal * 1000);
         }
 
-        const actualVal = parseFloat(document.getElementById('actual-' + id).value);
-        const actualMm  = isNaN(actualVal) ? null : actualVal;
-        let compliance  = null;
-        if (s_mm != null && actualMm != null) {
-            compliance = actualMm >= s_mm ? 'PASS' : 'FAIL';
-        }
+        const actualVal  = parseFloat(document.getElementById('actual-' + id)?.value);
+        const actualMm   = isNaN(actualVal) ? null : actualVal;
+        const compliance = (s_mm != null && actualMm != null) ? (actualMm >= s_mm ? 'PASS' : 'FAIL') : null;
 
-        // Readable labels for PDF
         const lpsClassLabel = lpsClass ? `Class ${lpsClass}` : '-';
-        const materialLabel = material === 'air' ? 'Air' : material === 'solid' ? 'Concrete, Brick or Wood' : '-';
-        const approachLabel = approach === 'simplified' ? 'Simplified (Cl. 6.3.2)' : 'Detailed (Cl. 6.3.3 / Annex C)';
-        let kcSource = '-';
-        if (approach === 'simplified') {
-            const numDC = document.getElementById('num-dc-' + id).value;
-            kcSource = numDC === '1' ? '1 down-conductor' : numDC === '2' ? '2 down-conductors' : numDC === '3' ? '3+ down-conductors' : '-';
-        } else {
-            kcSource = 'Manual entry (Annex C)';
-        }
+        const materialLabel = material === 'air' ? 'Air' : material === 'solid' ? 'Concrete, Bricks or Wood' : '-';
+        const approachLabel = approach === 'simplified'
+            ? 'Simplified — Table 13 (Cl. 6.3.2)'
+            : 'Detailed — Annex B (Cl. 6.3.1)';
 
         calculations.push({
             index: calculations.length + 1,
-            desc: desc || `Calculation ${calculations.length + 1}`,
+            desc:  desc || `Calculation ${calculations.length + 1}`,
             lpsClass, lpsClassLabel,
             material, materialLabel,
             approach, approachLabel,
-            ki, km, kc, kcSource,
-            l: isNaN(lVal) ? null : lVal,
-            s_mm,
-            actualMm,
-            compliance
+            ki, km,
+            kc:       kc   != null ? kc   : null,
+            kcLabel:  kcLabel  || '-',
+            kcSource: kcSource || '-',
+            kcFormula: kcFormula || '',
+            l:        isNaN(lVal) ? null : lVal,
+            s_mm, actualMm, compliance
         });
     });
 
