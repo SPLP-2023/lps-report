@@ -1,468 +1,780 @@
-// =============================================================================
-// sd-pdf.js — Separation Distance Calculator PDF Generator
-// BS EN IEC 62305-3:2024 — Clause 6.3 / Annex B
-// Follows exact T&I / Remedial pattern:
-//   window._logoBase64 / window._footerBase64 preloaded by HTML page
-// =============================================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Separation Distance — StrikeR</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" type="image/png" href="assets/SP Bolt 400x400.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="StrikeR">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <style>
+        .calc-card {
+            background: white;
+            border: 1.5px solid #dee2e6;
+            border-radius: 10px;
+            margin-bottom: 18px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .calc-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, #0d1b2a 0%, #0877c3 100%);
+            padding: 11px 16px;
+            gap: 10px;
+        }
+        .calc-card-title { color: white; font-weight: 700; font-size: 1em; }
+        .calc-card-body  { padding: 16px; }
+        .calc-delete-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white; border-radius: 5px; padding: 4px 10px;
+            cursor: pointer; font-size: 13px; transition: background 0.2s; flex-shrink: 0;
+        }
+        .calc-delete-btn:hover { background: rgba(220,53,69,0.7); transform: none; }
 
-const SD_NAVY        = [13, 27, 42];
-const SD_BLUE        = [8, 119, 195];
-const SD_AMBER       = [230, 160, 40];
-const SD_GREEN       = [34, 139, 34];
-const SD_RED         = [200, 40, 40];
-const SD_PAGE_W      = 210;
-const SD_PAGE_H      = 297;
-const SD_MARGIN      = 14;
-const SD_PAGE_BOT    = 262;
-const SD_FOOTER_TEXT = 'Strike Point Lightning Protection Ltd  |  Registered office: Atkinson Evans, 10 Arnot Hill Road, Nottingham NG5 6LJ  |  Company No. 15114852, Registered in England and Wales  |  info@strikepoint.uk  |  Tel: 01159903220';
+        .result-pill {
+            display: inline-flex; align-items: center; gap: 10px;
+            margin-top: 14px; padding: 10px 18px; border-radius: 8px;
+            background: #e8f4fd; border: 1.5px solid #0877c3;
+        }
+        .result-value { font-size: 1.5em; font-weight: 700; color: #0d1b2a; }
+        .result-label { color: #555; font-size: 0.88em; display: block; margin-bottom: 2px; }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+        .compliance-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 5px;
+            font-weight: 700; font-size: 0.9em; margin-left: 8px;
+        }
+        .badge-pass { background:#d4edda; color:#155724; border:1px solid #28a745; }
+        .badge-fail { background:#f8d7da; color:#721c24; border:1px solid #dc3545; }
 
-function sdSafe(str) {
-    return (str || '').replace(/[^\x20-\x7E]/g, '');
+        .coeff-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+        .coeff-chip {
+            background:#f0f4f8; border:1px solid #cdd5df; border-radius:5px;
+            padding:4px 9px; font-size:12px; color:#495057;
+        }
+        .coeff-chip span { font-weight:700; color:#0877c3; }
+
+        .annex-panel {
+            background:#f8f9fa; border:1px solid #dee2e6;
+            border-radius:6px; padding:12px; margin-top:6px;
+        }
+        .warn-note {
+            background:#fff3cd; border-left:3px solid #ffc107;
+            border-radius:0 5px 5px 0; padding:7px 11px;
+            font-size:12px; color:#856404; margin-top:6px;
+        }
+        .info-note {
+            background:#f0f8ff; border-left:3px solid #0877c3;
+            border-radius:0 5px 5px 0; padding:7px 11px;
+            font-size:12px; color:#444; margin-bottom:10px; line-height:1.5;
+        }
+        .kc-computed {
+            display:inline-block; background:#e8f4fd;
+            border:1.5px solid #0877c3; border-radius:6px;
+            padding:5px 14px; font-size:13px; font-weight:700;
+            color:#0d1b2a; margin-top:8px;
+        }
+        .add-calc-btn {
+            background: linear-gradient(135deg, #0d1b2a 0%, #0877c3 100%);
+            color:white; border:none; border-radius:8px; padding:12px 24px;
+            font-size:15px; font-weight:600; cursor:pointer; width:100%;
+            margin-bottom:80px; transition:filter 0.2s;
+        }
+        .add-calc-btn:hover { filter:brightness(1.12); transform:none; }
+        .no-calcs { text-align:center; padding:40px 20px; color:#aaa; font-style:italic; }
+        .sub-label { font-size:12px; color:#6c757d; font-weight:normal; margin-left:4px; }
+        .incomplete-note { color:#aaa; font-style:italic; font-size:13px; margin-top:12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="nav-header">
+        <button class="nav-button back-button" onclick="location.href='tools.html'">← Tools</button>
+        <button class="nav-button" onclick="location.href='reports.html'">Reports</button>
+    </div>
+
+    <h1>Separation Distance Calculator</h1>
+
+    <!-- ===================== SITE INFORMATION ===================== -->
+    <div class="section" id="sec-site">
+        <button class="section-header" onclick="toggleSection('sec-site')">
+            <span class="section-title">📋 Site Information <span style="font-weight:400;font-size:0.85em;opacity:0.75;">(optional)</span></span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-site"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="siteName">Site Name:</label>
+                    <input type="text" id="siteName" placeholder="e.g. Upper Norwood Library..."
+                        oninput="this.value=this.value.replace(/(?:^|\s)\S/g,c=>c.toUpperCase())">
+                </div>
+                <div class="form-group">
+                    <label for="calcDate">Date:</label>
+                    <input type="date" id="calcDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="siteAddress">Site Address:</label>
+                <textarea id="siteAddress" rows="3" placeholder="Enter site address..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="engineerName">Engineer Name:</label>
+                <input type="text" id="engineerName" placeholder="Enter engineer name..."
+                    oninput="this.value=this.value.replace(/(?:^|\s)\S/g,c=>c.toUpperCase())">
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== CALCULATIONS ===================== -->
+    <div class="section expanded" id="sec-calcs">
+        <button class="section-header" onclick="toggleSection('sec-calcs')">
+            <span class="section-title">📐 Calculations</span>
+            <span class="section-right">
+                <span class="status-dot dot-filled" id="dot-sec-calcs"></span>
+                <span class="chevron" style="transform:rotate(180deg)">▾</span>
+            </span>
+        </button>
+        <div class="section-body open">
+            <div id="calc-cards-container">
+                <div class="no-calcs" id="no-calcs-msg">No calculations yet. Use the button below to add one.</div>
+            </div>
+        </div>
+    </div>
+
+    <button class="add-calc-btn" onclick="addCalcCard()">+ Add Calculation</button>
+
+    <div class="sticky-generate">
+        <button onclick="generateSDPDF()">📄 Generate PDF Report</button>
+    </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/sd-pdf.js"></script>
+
+<script>
+// ── Branding preload ──
+async function blobToBase64(blob) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+    });
 }
-
-function sdFormatDate(dateStr) {
-    if (!dateStr) return '-';
-    const [y, m, d] = dateStr.split('-');
-    return y ? `${d}/${m}/${y}` : '-';
-}
-
-function sdFormatDateShort(dateStr) {
-    if (!dateStr) return 'undated';
-    const [y, m, d] = dateStr.split('-');
-    return y ? `${d}-${m}-${y.slice(2)}` : 'undated';
-}
-
-function sdAddImage(pdf, imageData, x, y, maxW, maxH, centre) {
-    if (!imageData) return 0;
+async function preloadBrandingImages() {
     try {
-        const fmt   = (imageData.startsWith('data:image/jpeg') || imageData.startsWith('data:image/jpg')) ? 'JPEG' : 'PNG';
-        const props = pdf.getImageProperties(imageData);
-        const ar    = props.width / props.height;
-        let fw, fh;
-        if (ar > maxW / maxH) { fw = maxW; fh = maxW / ar; }
-        else                  { fh = maxH; fw = maxH * ar; }
-        const fx = centre ? x + (maxW - fw) / 2 : x;
-        pdf.addImage(imageData, fmt, fx, y, fw, fh);
-        return fh;
-    } catch(e) {
-        console.error('sdAddImage error:', e);
-        return 0;
+        const [logoBlob, footerBlob] = await Promise.all([
+            fetch('./assets/Color logo - no background (px reduction).png').then(r => r.blob()),
+            fetch('./assets/es12nobackground.png').then(r => r.blob())
+        ]);
+        window._logoBase64   = await blobToBase64(logoBlob);
+        window._footerBase64 = await blobToBase64(footerBlob);
+    } catch(e) { console.error('Failed to preload branding images:', e); }
+}
+preloadBrandingImages();
+</script>
+
+<script>
+// ── Section toggle ──
+function toggleSection(id) {
+    const section = document.getElementById(id);
+    const body    = section.querySelector('.section-body');
+    const chevron = section.querySelector('.chevron');
+    const isOpen  = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    section.classList.toggle('expanded', !isOpen);
+    if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+</script>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// BS EN IEC 62305-3:2024 coefficient tables
+// ─────────────────────────────────────────────────────────────────────────────
+const KI            = { 'I':0.08, 'II':0.06, 'III':0.04, 'IV':0.04 };
+const KM            = { 'air':1.0, 'solid':0.5 };
+const KC_SIMPLIFIED = { '1':1.0, '2':0.66, '3':0.44 };
+
+let calcCounter = 0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Build card HTML
+// ─────────────────────────────────────────────────────────────────────────────
+function buildCardHTML(id) {
+    return `
+        <div class="calc-card-header">
+            <span class="calc-card-title">Calculation ${id}</span>
+            <button class="calc-delete-btn" onclick="deleteCalcCard(${id})">✕ Remove</button>
+        </div>
+        <div class="calc-card-body">
+
+            <div class="form-group">
+                <label for="desc-${id}">Description / Location:</label>
+                <input type="text" id="desc-${id}"
+                    placeholder="e.g. Down conductor at north elevation window..."
+                    oninput="recalc(${id})">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="lps-class-${id}">LPS Class:</label>
+                    <select id="lps-class-${id}" onchange="recalc(${id})">
+                        <option value="">Select...</option>
+                        <option value="I">Class I (ki = 0.08)</option>
+                        <option value="II">Class II (ki = 0.06)</option>
+                        <option value="III">Class III (ki = 0.04)</option>
+                        <option value="IV">Class IV (ki = 0.04)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="material-${id}">Insulation Material:</label>
+                    <select id="material-${id}" onchange="recalc(${id})">
+                        <option value="">Select...</option>
+                        <option value="air">Air (km = 1.0)</option>
+                        <option value="solid">Concrete, Bricks or Wood (km = 0.5)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="length-${id}">Length <em>l</em>
+                    <span class="sub-label">(along conductor from assessment point to nearest bonding point or earth termination, m)</span>
+                </label>
+                <input type="number" id="length-${id}" min="0" step="0.1" placeholder="0.0" oninput="recalc(${id})">
+            </div>
+
+            <div class="form-group">
+                <label for="approach-${id}">kc Approach:</label>
+                <select id="approach-${id}" onchange="onApproachChange(${id})">
+                    <option value="simplified">Simplified — Table 13 (Cl. 6.3.2)</option>
+                    <option value="detailed">Detailed — Annex B (Cl. 6.3.1)</option>
+                </select>
+            </div>
+
+            <!-- ── Simplified panel ── -->
+            <div id="simp-panel-${id}">
+                <div class="form-group">
+                    <label for="num-dc-${id}">Number of Down-Conductors:</label>
+                    <select id="num-dc-${id}" onchange="recalc(${id})">
+                        <option value="">Select...</option>
+                        <option value="1">1 — isolated LPS (kc = 1.00)</option>
+                        <option value="2">2 (kc = 0.66)</option>
+                        <option value="3">3 or more (kc = 0.44)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ── Detailed panel ── -->
+            <div id="det-wrap-${id}" style="display:none;">
+                <div class="annex-panel">
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label for="annex-fig-${id}">Annex B Figure (BS EN IEC 62305-3:2024):</label>
+                        <select id="annex-fig-${id}" onchange="onAnnexFigChange(${id})">
+                            <option value="">Select figure...</option>
+                            <option value="B1">Figure B.1 — Wire air-termination system</option>
+                            <option value="B2">Figure B.2 — Multiple down-conductors with ring conductors</option>
+                            <option value="B3">Figure B.3 — Multiple interconnecting ring levels</option>
+                            <option value="B4">Figure B.4 — Meshed air-termination system (roof bond item)</option>
+                        </select>
+                    </div>
+
+                    <!-- ── Figure B.1: Wire AT — kc = (h+c)/(2h+c) ── -->
+                    <div id="fig-b1-${id}" style="display:none;">
+                        <div class="info-note">
+                            <strong>Figure B.1 — Wire air-termination system</strong><br>
+                            Also applicable to sloped roofs with AT on the ridge.<br>
+                            Formula: kc = (h + c) / (2h + c)<br>
+                            <em>h</em> = height of masts / DC length to nearest bonding point or earth (m)<br>
+                            <em>c</em> = distance between the two down-conductors (m)
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>h <span class="sub-label">(m)</span></label>
+                                <input type="number" id="b1-h-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                            </div>
+                            <div class="form-group">
+                                <label>c <span class="sub-label">(m)</span></label>
+                                <input type="number" id="b1-c-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                            </div>
+                        </div>
+                        <div id="b1-kc-${id}"></div>
+                    </div>
+
+                    <!-- ── Figure B.2: Multiple DCs — kc = 1/(2n) + 0.1 + 0.2 × ∛(c/h) ── -->
+                    <div id="fig-b2-${id}" style="display:none;">
+                        <div class="info-note">
+                            <strong>Figure B.2 — Multiple down-conductor system</strong><br>
+                            Formula: kc = 1/(2n) + 0.1 + 0.2 &times; &#8731;(c/h)<br>
+                            Valid for cubic structures, n &ge; 4, h and c in range 3–20 m.<br>
+                            <em>n</em> = total number of down-conductors (include internal DCs)<br>
+                            <em>c</em> = distance from a DC to the next DC (m)<br>
+                            <em>h</em> = spacing (height) between ring conductors (m)
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>n <span class="sub-label">(total DCs)</span></label>
+                                <input type="number" id="b2-n-${id}" min="1" step="1" placeholder="e.g. 6" oninput="recalc(${id})">
+                            </div>
+                            <div class="form-group">
+                                <label>h <span class="sub-label">(ring spacing, m)</span></label>
+                                <input type="number" id="b2-h-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                            </div>
+                            <div class="form-group">
+                                <label>c <span class="sub-label">(DC spacing, m)</span></label>
+                                <input type="number" id="b2-c-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                            </div>
+                        </div>
+                        <div id="b2-warn-${id}"></div>
+                        <div id="b2-kc-${id}"></div>
+                    </div>
+
+                    <!-- ── Figure B.3: Multiple ring levels ── -->
+                    <div id="fig-b3-${id}" style="display:none;">
+                        <div class="info-note">
+                            <strong>Figure B.3 — Multiple DCs with interconnecting ring at each level</strong><br>
+                            kc depends on which level the assessment point is at:<br>
+                            &bull; Top (kc1): 1/(2n) + 0.1 + 0.2 &times; &#8731;(c/h&#8321;)<br>
+                            &bull; Level 2 (kc2): 1/n + 0.1<br>
+                            &bull; Level 3 (kc3): 1/n + 0.01<br>
+                            &bull; Level 4 and below (kc4+): 1/n<br>
+                            <em>n</em> = total number of down-conductors (include internal DCs)
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>n <span class="sub-label">(total DCs)</span></label>
+                                <input type="number" id="b3-n-${id}" min="1" step="1" placeholder="e.g. 4" oninput="recalc(${id})">
+                            </div>
+                            <div class="form-group">
+                                <label>Assessment level:</label>
+                                <select id="b3-level-${id}" onchange="onB3LevelChange(${id})">
+                                    <option value="">Select level...</option>
+                                    <option value="top">Top level (kc1)</option>
+                                    <option value="L2">Level 2 (kc2)</option>
+                                    <option value="L3">Level 3 (kc3)</option>
+                                    <option value="L4">Level 4 and below (kc4+)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Top level needs c and h₁ -->
+                        <div id="b3-top-inputs-${id}" style="display:none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>h&#8321; <span class="sub-label">(ring spacing at top level, m)</span></label>
+                                    <input type="number" id="b3-h-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                                </div>
+                                <div class="form-group">
+                                    <label>c <span class="sub-label">(DC spacing, m)</span></label>
+                                    <input type="number" id="b3-c-${id}" min="0.01" step="0.1" placeholder="m" oninput="recalc(${id})">
+                                </div>
+                            </div>
+                        </div>
+                        <div id="b3-kc-${id}"></div>
+                    </div>
+
+                    <!-- ── Figure B.4: Meshed AT — computed from roof geometry ── -->
+                    <div id="fig-b4-${id}" style="display:none;">
+                        <div class="info-note">
+                            <strong>Figure B.4 — Meshed air-termination system (roof bond item)</strong><br>
+                            For a bond item located on the roof inside the AT mesh. Current-division rules (Figure B.4):<br>
+                            &bull; At the strike/injection point: worst-case path carries <strong>0.5</strong> of total current<br>
+                            &bull; At each intermediate mesh junction crossed: &times; 0.5<br>
+                            &bull; At the down-conductor: &times; 0.5<br>
+                            &bull; Minimum kc = 1/n<br>
+                            <em>Formula: kc = 0.5 &times; 0.5<sup>(junctions+1)</sup>, subject to minimum 1/n</em><br><br>
+                            <strong>Note:</strong> Length <em>l</em> above should include the roof conductor run from the bond item
+                            to the perimeter plus the DC length to the nearest bonding point.
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>n <span class="sub-label">(total down-conductors)</span></label>
+                                <input type="number" id="b4-n-${id}" min="1" step="1" placeholder="e.g. 11" oninput="recalc(${id})">
+                            </div>
+                            <div class="form-group">
+                                <label>Mesh squares crossed to perimeter <span class="sub-label">(0 = inside first square)</span></label>
+                                <select id="b4-squares-${id}" onchange="recalc(${id})">
+                                    <option value="">Select...</option>
+                                    <option value="0">0 — bond item inside first mesh square (no intermediate junctions)</option>
+                                    <option value="1">1 — crosses one intermediate mesh junction</option>
+                                    <option value="2">2 — crosses two intermediate mesh junctions</option>
+                                    <option value="3">3 — crosses three intermediate mesh junctions</option>
+                                    <option value="4">4 — crosses four intermediate mesh junctions</option>
+                                    <option value="5">5 — crosses five or more intermediate mesh junctions</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="b4-kc-display-${id}"></div>
+                        <div id="b4-warn-${id}"></div>
+                    </div>
+
+                </div><!-- end annex-panel -->
+            </div><!-- end det-wrap -->
+
+            <!-- ── Optional compliance check ── -->
+            <div class="form-group" style="margin-top:12px;">
+                <label for="actual-${id}">Actual Distance Available
+                    <span class="sub-label">(mm — optional, for PASS/FAIL check)</span>
+                </label>
+                <input type="number" id="actual-${id}" min="0" step="1"
+                    placeholder="Enter measured distance..." oninput="recalc(${id})">
+            </div>
+
+            <!-- ── Live result ── -->
+            <div id="result-${id}"></div>
+
+        </div>
+    `;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Card management
+// ─────────────────────────────────────────────────────────────────────────────
+function addCalcCard() {
+    calcCounter++;
+    const id = calcCounter;
+    const noMsg = document.getElementById('no-calcs-msg');
+    if (noMsg) noMsg.remove();
+    const container = document.getElementById('calc-cards-container');
+    const card = document.createElement('div');
+    card.className = 'calc-card';
+    card.id = 'calc-card-' + id;
+    card.innerHTML = buildCardHTML(id);
+    container.appendChild(card);
+    recalc(id);
+}
+
+function deleteCalcCard(id) {
+    const card = document.getElementById('calc-card-' + id);
+    if (card) card.remove();
+    const container = document.getElementById('calc-cards-container');
+    if (!container.querySelector('.calc-card')) {
+        container.innerHTML = '<div class="no-calcs" id="no-calcs-msg">No calculations yet. Use the button below to add one.</div>';
     }
 }
 
-// ── Page header ───────────────────────────────────────────────────────────────
+function onApproachChange(id) {
+    const v = document.getElementById('approach-' + id).value;
+    document.getElementById('simp-panel-' + id).style.display = v === 'simplified' ? 'block' : 'none';
+    document.getElementById('det-wrap-'   + id).style.display = v === 'detailed'   ? 'block' : 'none';
+    recalc(id);
+}
 
-function sdAddHeader(pdf, title, subtitle) {
-    const barH = 18;
-    pdf.setFillColor(...SD_NAVY);
-    pdf.rect(0, 0, SD_PAGE_W, barH, 'F');
-    try {
-        if (window._logoBase64) sdAddImage(pdf, window._logoBase64, SD_PAGE_W - 32, 1, 30, 16, false);
-    } catch(e) {}
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(13);
-    pdf.setFont(undefined, 'bold');
-    pdf.text(sdSafe(title), SD_PAGE_W / 2, 11, { align: 'center' });
-    if (subtitle) {
-        pdf.setFontSize(7);
-        pdf.setFont(undefined, 'normal');
-        pdf.setTextColor(180, 210, 235);
-        pdf.text(sdSafe(subtitle), SD_PAGE_W / 2, 16, { align: 'center' });
+function onAnnexFigChange(id) {
+    const fig = document.getElementById('annex-fig-' + id).value;
+    ['b1','b2','b3','b4'].forEach(f => {
+        const el = document.getElementById('fig-' + f + '-' + id);
+        if (el) el.style.display = (fig === f.toUpperCase()) ? 'block' : 'none';
+    });
+    recalc(id);
+}
+
+function onB3LevelChange(id) {
+    const level = document.getElementById('b3-level-' + id).value;
+    const topInputs = document.getElementById('b3-top-inputs-' + id);
+    if (topInputs) topInputs.style.display = level === 'top' ? 'block' : 'none';
+    recalc(id);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Annex B kc computation (BS EN IEC 62305-3:2024)
+// Returns { kc, kcLabel, kcSource, kcFormula, warning }
+// ─────────────────────────────────────────────────────────────────────────────
+function computeDetailedKc(id) {
+    const fig = document.getElementById('annex-fig-' + id)?.value;
+    if (!fig) return { kc:null, kcLabel:'—', kcSource:'Annex B (no figure selected)', kcFormula:'', warning:null };
+
+    // ── Figure B.1: kc = (h+c)/(2h+c) ──────────────────────────────────────
+    if (fig === 'B1') {
+        const h = parseFloat(document.getElementById('b1-h-' + id).value);
+        const c = parseFloat(document.getElementById('b1-c-' + id).value);
+        const dispEl = document.getElementById('b1-kc-' + id);
+        if (isNaN(h) || isNaN(c) || h <= 0 || c <= 0) {
+            if (dispEl) dispEl.innerHTML = '';
+            return { kc:null, kcLabel:'—', kcSource:'Figure B.1 — Wire AT', kcFormula:'kc = (h+c)/(2h+c)', warning:null };
+        }
+        const kc = (h + c) / (2 * h + c);
+        if (dispEl) dispEl.innerHTML = `<div class="kc-computed">Computed kc = ${kc.toFixed(3)}</div>`;
+        return {
+            kc, kcLabel: kc.toFixed(3),
+            kcSource: 'Figure B.1 — Wire AT system',
+            kcFormula: `kc = (${h}+${c})/(2×${h}+${c}) = ${kc.toFixed(3)}`,
+            warning: null
+        };
     }
-    pdf.setTextColor(0, 0, 0);
-    return barH + 6;
-}
 
-// ── Page footer ───────────────────────────────────────────────────────────────
-
-function sdAddFooter(pdf) {
-    const barH = 16;
-    const barY = SD_PAGE_H - barH;
-    pdf.setFillColor(...SD_NAVY);
-    pdf.rect(0, barY, SD_PAGE_W, barH, 'F');
-    try {
-        if (window._footerBase64) sdAddImage(pdf, window._footerBase64, SD_PAGE_W / 2 - 36, 259, 72, 18, false);
-    } catch(e) {}
-    pdf.setFontSize(5.5);
-    pdf.setFont(undefined, 'normal');
-    pdf.setTextColor(160, 190, 210);
-    const lines  = pdf.splitTextToSize(SD_FOOTER_TEXT, 180);
-    const lineH  = 3.5;
-    const blockH = lines.length * lineH;
-    const textY  = barY + (barH / 2) - (blockH / 2) + lineH;
-    pdf.text(lines, SD_PAGE_W / 2, textY, { align: 'center', lineHeightFactor: 1.3 });
-    pdf.setTextColor(0, 0, 0);
-}
-
-function sdNewPage(pdf, title, subtitle) {
-    pdf.addPage();
-    sdAddFooter(pdf);
-    return sdAddHeader(pdf, title, subtitle);
-}
-
-// ── Blue section header bar ───────────────────────────────────────────────────
-
-function sdSectionBar(pdf, label, x, y, w) {
-    pdf.setFillColor(...SD_BLUE);
-    pdf.rect(x, y, w, 9, 'F');
-    pdf.setFontSize(8.5);
-    pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(255, 255, 255);
-    pdf.text(sdSafe(label.toUpperCase()), x + 4, y + 6.2);
-    pdf.setTextColor(0, 0, 0);
-    return y + 9;
-}
-
-// ── Two-column info field ─────────────────────────────────────────────────────
-
-function sdInfoField(pdf, label, value, x, y, colW) {
-    const labelColor = [100, 130, 160];
-    const valueColor = [20, 20, 20];
-    pdf.setFontSize(7);
-    pdf.setFont(undefined, 'normal');
-    pdf.setTextColor(...labelColor);
-    pdf.text(label.toUpperCase(), x, y + 4);
-    pdf.setFontSize(10);
-    pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(...valueColor);
-    const lines = pdf.splitTextToSize(sdSafe(value) || '-', colW);
-    pdf.text(lines[0], x, y + 12);
-}
-
-// ── COVER PAGE ────────────────────────────────────────────────────────────────
-
-function sdBuildCoverPage(pdf, data) {
-    const { siteName, siteAddress, calcDate, engineerName } = data;
-
-    // Thin top navy bar
-    pdf.setFillColor(...SD_NAVY);
-    pdf.rect(0, 0, SD_PAGE_W, 10, 'F');
-
-    // Logo — larger than other reports (maxH=80 vs 50 in T&I, no building image)
-    let y = 14;
-    try {
-        if (window._logoBase64) {
-            const logoH = sdAddImage(pdf, window._logoBase64, SD_MARGIN, y, SD_PAGE_W - SD_MARGIN * 2, 80, true);
-            y += logoH + 12;
-        } else {
-            y += 92;
+    // ── Figure B.2: kc = 1/(2n) + 0.1 + 0.2 × ∛(c/h) ──────────────────────
+    if (fig === 'B2') {
+        const n = parseInt(document.getElementById('b2-n-' + id).value);
+        const h = parseFloat(document.getElementById('b2-h-' + id).value);
+        const c = parseFloat(document.getElementById('b2-c-' + id).value);
+        const warnEl = document.getElementById('b2-warn-' + id);
+        const dispEl = document.getElementById('b2-kc-'   + id);
+        if (isNaN(n) || isNaN(h) || isNaN(c) || n <= 0 || h <= 0 || c <= 0) {
+            if (warnEl) warnEl.innerHTML = '';
+            if (dispEl) dispEl.innerHTML = '';
+            return { kc:null, kcLabel:'—', kcSource:'Figure B.2 — Multiple DCs', kcFormula:'kc = 1/(2n) + 0.1 + 0.2×∛(c/h)', warning:null };
         }
-    } catch(e) { y += 92; }
-
-    const cardX = SD_MARGIN;
-    const cardW = SD_PAGE_W - SD_MARGIN * 2;
-
-    // Site name
-    pdf.setFontSize(18);
-    pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(...SD_NAVY);
-    pdf.text(sdSafe(siteName || '-'), SD_PAGE_W / 2, y + 6, { align: 'center' });
-    y += 12;
-
-    // Site address
-    if (siteAddress) {
-        const addrLines = pdf.splitTextToSize(sdSafe(siteAddress), cardW - 10);
-        pdf.setFontSize(10);
-        pdf.setFont(undefined, 'normal');
-        pdf.setTextColor(90, 90, 90);
-        pdf.text(addrLines, SD_PAGE_W / 2, y, { align: 'center', lineHeightFactor: 1.5 });
-        y += addrLines.length * 6;
+        const kc = 1 / (2 * n) + 0.1 + 0.2 * Math.cbrt(c / h);
+        const warnings = [];
+        if (n < 4)       warnings.push('n < 4 (formula approximation valid for n ≥ 4)');
+        if (h < 3 || h > 20) warnings.push(`h = ${h} m (valid range 3–20 m)`);
+        if (c < 3 || c > 20) warnings.push(`c = ${c} m (valid range 3–20 m)`);
+        if (warnEl) warnEl.innerHTML = warnings.length
+            ? `<div class="warn-note">⚠ Figure B.2 approximation may be less accurate: ${warnings.join('; ')}.</div>` : '';
+        if (dispEl) dispEl.innerHTML = `<div class="kc-computed">Computed kc = ${kc.toFixed(3)}</div>`;
+        return {
+            kc, kcLabel: kc.toFixed(3),
+            kcSource: 'Figure B.2 — Multiple DC system',
+            kcFormula: `kc = 1/(2×${n}) + 0.1 + 0.2×∛(${c}/${h}) = ${kc.toFixed(3)}`,
+            warning: warnings.length ? warnings.join('; ') : null
+        };
     }
-    y += 8;
 
-    // Title card
-    const titleCardH = 24;
-    pdf.setFillColor(25, 45, 65);
-    pdf.rect(cardX, y, cardW, titleCardH, 'F');
-    pdf.setFontSize(16);
-    pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(255, 255, 255);
-    pdf.text('LIGHTNING PROTECTION', SD_PAGE_W / 2, y + 9, { align: 'center' });
-    pdf.setFontSize(13);
-    pdf.setTextColor(...SD_AMBER);
-    pdf.text('SEPARATION DISTANCE CALCULATION', SD_PAGE_W / 2, y + 18, { align: 'center' });
-    y += titleCardH + 6;
-
-    // Standard badge
-    const badgeW = 140;
-    const badgeX = (SD_PAGE_W - badgeW) / 2;
-    pdf.setFillColor(240, 246, 252);
-    pdf.setDrawColor(...SD_BLUE);
-    pdf.setLineWidth(0.5);
-    pdf.rect(badgeX, y, badgeW, 9, 'FD');
-    pdf.setFontSize(7.5);
-    pdf.setFont(undefined, 'normal');
-    pdf.setTextColor(...SD_BLUE);
-    pdf.text('BS EN IEC 62305-3:2024  |  Clause 6.3 & Annex B', SD_PAGE_W / 2, y + 6.2, { align: 'center' });
-    y += 9 + 6;
-
-    // Info card
-    const rowH  = 18;
-    const infoH = rowH * 2;
-    pdf.setFillColor(250, 252, 255);
-    pdf.rect(cardX, y, cardW, infoH, 'F');
-    pdf.setDrawColor(...SD_BLUE);
-    pdf.setLineWidth(0.5);
-    pdf.rect(cardX, y, cardW, infoH);
-
-    const divX = cardX + cardW / 2;
-    pdf.setDrawColor(210, 225, 240);
-    pdf.setLineWidth(0.3);
-    pdf.line(divX, y + 1, divX, y + infoH - 1);
-    pdf.line(cardX + 1, y + rowH, cardX + cardW - 1, y + rowH);
-
-    const col1X = cardX + 5;
-    const col2X = cardX + cardW / 2 + 5;
-    const colW  = cardW / 2 - 10;
-
-    sdInfoField(pdf, 'Date',     sdFormatDate(calcDate), col1X, y,          colW);
-    sdInfoField(pdf, 'Engineer', engineerName,            col2X, y,          colW);
-    sdInfoField(pdf, 'Standard', 'BS EN IEC 62305-3:2024', col1X, y + rowH, colW);
-    sdInfoField(pdf, 'Reference', 'Clause 6.3 & Annex B',  col2X, y + rowH, colW);
-
-    sdAddFooter(pdf);
-}
-
-// ── CALCULATIONS PAGES ────────────────────────────────────────────────────────
-
-function sdBuildCalculations(pdf, calculations) {
-    const HDR     = 'SEPARATION DISTANCE CALCULATIONS';
-    const HDR_CON = 'SEPARATION DISTANCE CALCULATIONS (CONTINUED)';
-    const SUB     = 'BS EN IEC 62305-3:2024 | Cl. 6.3';
-
-    let y = sdNewPage(pdf, HDR, SUB);
-    const cw      = SD_PAGE_W - SD_MARGIN * 2;
-    const labelW  = cw * 0.50;
-    const rowH    = 8;
-
-    calculations.forEach(calc => {
-        // Rows — actual distance included only if entered
-        const dataRows = [
-            ['LPS Class',               calc.lpsClassLabel || '-'],
-            ['Insulation Material',     calc.materialLabel || '-'],
-            ['kc Approach',             calc.approachLabel || '-'],
-            ['kc Source',               calc.kcSource      || '-'],
-            ['ki (LPS class factor)',    calc.ki != null ? calc.ki.toFixed(2) : '-'],
-            ['km (material factor)',     calc.km != null ? calc.km.toFixed(1) : '-'],
-            ['kc (current partition)',   calc.kcLabel || '-'],
-            ['l  (conductor length)',    calc.l != null ? `${calc.l.toFixed(1)} m` : '-'],
-            ...(calc.actualMm != null ? [['Actual distance available', `${calc.actualMm} mm`]] : []),
-        ];
-
-        const formulaLine  = calc.kcFormula ? 1 : 0;
-        const blockH = 9 + (dataRows.length * rowH) + 4 + (formulaLine * 6) + 14 + 10;
-
-        if (y + blockH > SD_PAGE_BOT) {
-            y = sdNewPage(pdf, HDR_CON, SUB);
+    // ── Figure B.3: Multiple ring levels ────────────────────────────────────
+    if (fig === 'B3') {
+        const n     = parseInt(document.getElementById('b3-n-'     + id).value);
+        const level = document.getElementById('b3-level-' + id).value;
+        const dispEl = document.getElementById('b3-kc-' + id);
+        if (isNaN(n) || n <= 0 || !level) {
+            if (dispEl) dispEl.innerHTML = '';
+            return { kc:null, kcLabel:'—', kcSource:'Figure B.3 — Multiple ring levels', kcFormula:'', warning:null };
         }
 
-        // Section bar with calc index and description
-        const barLabel = `Calculation ${calc.index}${calc.desc ? ' — ' + calc.desc : ''}`;
-        y = sdSectionBar(pdf, barLabel, SD_MARGIN, y, cw);
+        let kc, kcFormula, levelLabel;
 
-        // Data rows
-        const tableTopY = y;
-        dataRows.forEach((row, i) => {
-            const bg = i % 2 === 0 ? [255,255,255] : [244,248,252];
-            pdf.setFillColor(...bg);
-            pdf.rect(SD_MARGIN, y, cw, rowH, 'F');
-            pdf.setFontSize(8.5);
-            pdf.setFont(undefined, 'bold');
-            pdf.setTextColor(60, 60, 60);
-            pdf.text(sdSafe(row[0]), SD_MARGIN + 3, y + 5.5);
-            pdf.setFont(undefined, 'normal');
-            pdf.setTextColor(20, 20, 20);
-            const val = pdf.splitTextToSize(sdSafe(row[1]), labelW - 4)[0] || '';
-            pdf.text(val, SD_MARGIN + labelW + 3, y + 5.5);
-            y += rowH;
-        });
-
-        // Table border + column divider
-        pdf.setDrawColor(...SD_BLUE);
-        pdf.setLineWidth(0.3);
-        pdf.rect(SD_MARGIN, tableTopY, cw, y - tableTopY);
-        pdf.line(SD_MARGIN + labelW, tableTopY, SD_MARGIN + labelW, y);
-
-        y += 3;
-
-        // Formula line
-        if (calc.kcFormula) {
-            pdf.setFontSize(7.5);
-            pdf.setFont(undefined, 'italic');
-            pdf.setTextColor(80, 80, 80);
-            pdf.text(sdSafe('kc formula: ' + calc.kcFormula), SD_MARGIN, y + 4);
-            y += 7;
-        }
-
-        // s formula line
-        if (calc.ki != null && calc.km != null && calc.kc != null && calc.l != null) {
-            pdf.setFontSize(7.5);
-            pdf.setFont(undefined, 'italic');
-            pdf.setTextColor(80, 80, 80);
-            const sFormula = `s = (ki/km) x kc x l = (${calc.ki.toFixed(2)}/${calc.km.toFixed(1)}) x ${calc.kcLabel} x ${calc.l.toFixed(1)} m`;
-            pdf.text(sdSafe(sFormula), SD_MARGIN, y + 4);
-            y += 7;
-        }
-
-        // Result bar
-        const resultH = 14;
-        if (calc.s_mm != null) {
-            pdf.setFillColor(...SD_NAVY);
-            pdf.rect(SD_MARGIN, y, cw, resultH, 'F');
-
-            // Label — left
-            pdf.setFontSize(10);
-            pdf.setFont(undefined, 'bold');
-            pdf.setTextColor(255, 255, 255);
-            pdf.text('Required Separation Distance:', SD_MARGIN + 4, y + 9);
-
-            // Result value — centred, large amber
-            pdf.setFontSize(16);
-            pdf.setFont(undefined, 'bold');
-            pdf.setTextColor(...SD_AMBER);
-            pdf.text(`${calc.s_mm} mm`, SD_PAGE_W / 2, y + 9.5, { align: 'center' });
-
-            // PASS/FAIL badge — right, smaller box
-            if (calc.compliance) {
-                const isPass = calc.compliance === 'PASS';
-                const bW     = 20;
-                const bH     = 7;
-                const bX     = SD_PAGE_W - SD_MARGIN - bW;
-                const bY     = y + (resultH - bH) / 2;
-                pdf.setFillColor(...(isPass ? SD_GREEN : SD_RED));
-                pdf.rect(bX, bY, bW, bH, 'F');
-                pdf.setFontSize(10);
-                pdf.setFont(undefined, 'bold');
-                pdf.setTextColor(255, 255, 255);
-                pdf.text(calc.compliance, bX + bW / 2, bY + 5.2, { align: 'center' });
+        if (level === 'top') {
+            const h = parseFloat(document.getElementById('b3-h-' + id).value);
+            const c = parseFloat(document.getElementById('b3-c-' + id).value);
+            if (isNaN(h) || isNaN(c) || h <= 0 || c <= 0) {
+                if (dispEl) dispEl.innerHTML = '';
+                return { kc:null, kcLabel:'—', kcSource:'Figure B.3 — Top level', kcFormula:'kc1 = 1/(2n)+0.1+0.2×∛(c/h₁)', warning:null };
             }
-            y += resultH;
+            kc = 1 / (2 * n) + 0.1 + 0.2 * Math.cbrt(c / h);
+            kcFormula  = `kc1 = 1/(2×${n})+0.1+0.2×∛(${c}/${h}) = ${kc.toFixed(3)}`;
+            levelLabel = 'Top level (kc1)';
+        } else if (level === 'L2') {
+            kc = 1 / n + 0.1;
+            kcFormula  = `kc2 = 1/${n}+0.1 = ${kc.toFixed(3)}`;
+            levelLabel = 'Level 2 (kc2)';
+        } else if (level === 'L3') {
+            kc = 1 / n + 0.01;
+            kcFormula  = `kc3 = 1/${n}+0.01 = ${kc.toFixed(3)}`;
+            levelLabel = 'Level 3 (kc3)';
         } else {
-            pdf.setFillColor(180, 180, 180);
-            pdf.rect(SD_MARGIN, y, cw, resultH, 'F');
-            pdf.setFontSize(9);
-            pdf.setFont(undefined, 'italic');
-            pdf.setTextColor(255, 255, 255);
-            pdf.text('Incomplete data — result not available', SD_PAGE_W / 2, y + 9, { align: 'center' });
-            y += resultH;
+            kc = 1 / n;
+            kcFormula  = `kc4 = 1/${n} = ${kc.toFixed(3)}`;
+            levelLabel = 'Level 4+ (kc4)';
         }
 
-        y += 10;
-    });
-}
-
-// ── SUMMARY TABLE ─────────────────────────────────────────────────────────────
-
-function sdBuildSummary(pdf, calculations) {
-    const SUB = 'BS EN IEC 62305-3:2024 | Cl. 6.3';
-    let y = sdNewPage(pdf, 'CALCULATION SUMMARY', SUB);
-    const cw = SD_PAGE_W - SD_MARGIN * 2;
-
-    // Column widths: No. | Description | ki | km | kc | l(m) | s(mm) | Status
-    // Total must equal cw (182mm): 8+50+13+13+13+16+22+47 = 182
-    const cols   = [8, 50, 13, 13, 13, 16, 22, 47];
-    const hdrs   = ['No.', 'Description', 'ki', 'km', 'kc', 'l (m)', 's (mm)', 'Status'];
-    const hdrH   = 9;
-    const rowH   = 9;
-
-    // Header row
-    pdf.setFillColor(...SD_BLUE);
-    pdf.rect(SD_MARGIN, y, cw, hdrH, 'F');
-    pdf.setFontSize(7.5);
-    pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(255, 255, 255);
-    let cx = SD_MARGIN;
-    hdrs.forEach((h, i) => {
-        pdf.text(sdSafe(h), cx + cols[i] / 2, y + 6.2, { align: 'center' });
-        cx += cols[i];
-    });
-    y += hdrH;
-
-    const tableTopY = y;
-
-    calculations.forEach((calc, idx) => {
-        const bg = idx % 2 === 0 ? [255,255,255] : [244,248,252];
-        pdf.setFillColor(...bg);
-        pdf.rect(SD_MARGIN, y, cw, rowH, 'F');
-
-        pdf.setFontSize(7.5);
-        pdf.setFont(undefined, 'normal');
-        pdf.setTextColor(20, 20, 20);
-
-        const cells = [
-            String(calc.index),
-            calc.desc || '-',
-            calc.ki != null ? calc.ki.toFixed(2) : '-',
-            calc.km != null ? calc.km.toFixed(1) : '-',
-            calc.kcLabel || '-',
-            calc.l  != null ? calc.l.toFixed(1)  : '-',
-            calc.s_mm != null ? `${calc.s_mm}` : '-',
-            calc.compliance || '-'
-        ];
-
-        cx = SD_MARGIN;
-        cells.forEach((cell, i) => {
-            if (i === 7 && calc.compliance) {
-                const isPass = calc.compliance === 'PASS';
-                pdf.setTextColor(...(isPass ? SD_GREEN : SD_RED));
-                pdf.setFont(undefined, 'bold');
-                pdf.text(sdSafe(cell), cx + cols[i] / 2, y + 6.2, { align: 'center' });
-                pdf.setFont(undefined, 'normal');
-                pdf.setTextColor(20, 20, 20);
-            } else {
-                const t = pdf.splitTextToSize(sdSafe(cell), cols[i] - 2)[0] || '';
-                pdf.text(t, cx + cols[i] / 2, y + 6.2, { align: 'center' });
-            }
-            cx += cols[i];
-        });
-        y += rowH;
-    });
-
-    // Table border + column dividers
-    pdf.setDrawColor(...SD_BLUE);
-    pdf.setLineWidth(0.3);
-    pdf.rect(SD_MARGIN, tableTopY - hdrH, cw, y - tableTopY + hdrH);
-    cx = SD_MARGIN;
-    cols.slice(0, -1).forEach(w => {
-        cx += w;
-        pdf.line(cx, tableTopY - hdrH, cx, y);
-    });
-
-    y += 8;
-
-    // Formula reference
-    pdf.setFontSize(7.5);
-    pdf.setFont(undefined, 'italic');
-    pdf.setTextColor(100, 100, 100);
-    pdf.text('Formula (Eq. 6, Cl. 6.3.2): s = (ki / km) x kc x l', SD_MARGIN, y);
-    y += 5;
-    pdf.text('ki: LPS class factor (Table 11)  |  km: insulation material factor (Table 12)  |  kc: current partition coefficient (Table 13 or Annex B)  |  l: conductor length (m)', SD_MARGIN, y, { maxWidth: cw });
-    pdf.setTextColor(0, 0, 0);
-}
-
-// ── MAIN ENTRY POINT ──────────────────────────────────────────────────────────
-
-function sdGeneratePDF(data) {
-    const { siteName, siteAddress, calcDate, engineerName, calculations } = data;
-
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-    // Cover page
-    sdBuildCoverPage(pdf, { siteName, siteAddress, calcDate, engineerName });
-
-    // Calculation pages
-    sdBuildCalculations(pdf, calculations);
-
-    // Summary table (only if 2+ calculations)
-    if (calculations.length > 1) {
-        sdBuildSummary(pdf, calculations);
+        if (dispEl) dispEl.innerHTML = `<div class="kc-computed">Computed kc = ${kc.toFixed(3)} <span style="font-size:11px;font-weight:normal;color:#555;">(n=${n}, ${levelLabel})</span></div>`;
+        return {
+            kc, kcLabel: kc.toFixed(3),
+            kcSource: `Figure B.3 — ${levelLabel}`,
+            kcFormula, warning: null
+        };
     }
 
-    // Filename: SD Calc - [SiteName] [dd-mm-yy].pdf
-    const datePart = sdFormatDateShort(calcDate);
-    const namePart = (siteName || 'Report').replace(/[^a-zA-Z0-9 \-_]/g, '').trim().substring(0, 40);
-    pdf.save(`SD Calc - ${namePart} ${datePart}.pdf`);
+    // ── Figure B.4: Meshed AT — computed from roof geometry ─────────────────
+    if (fig === 'B4') {
+        const n       = parseInt(document.getElementById('b4-n-'       + id).value);
+        const squares = document.getElementById('b4-squares-' + id).value;
+        const dispEl  = document.getElementById('b4-kc-display-' + id);
+        const warnEl  = document.getElementById('b4-warn-' + id);
+
+        if (isNaN(n) || n <= 0 || squares === '') {
+            if (dispEl) dispEl.innerHTML = '';
+            if (warnEl) warnEl.innerHTML = '';
+            return { kc:null, kcLabel:'—', kcSource:'Figure B.4 — Meshed AT', kcFormula:'', warning:null };
+        }
+
+        const junctions  = parseInt(squares);   // intermediate mesh junctions crossed
+        const minKc      = 1 / n;
+
+        // kc = 0.5 (injection) × 0.5^junctions (intermediate) × 0.5 (at DC)
+        // = 0.5^(junctions + 2)
+        const kcRaw  = Math.pow(0.5, junctions + 2);
+        const kc     = Math.max(kcRaw, minKc);  // never below 1/n
+        const capped = kcRaw < minKc;
+
+        // Build formula string
+        const exponent   = junctions + 2;
+        const kcFormula  = capped
+            ? `kc = max(0.5^${exponent}, 1/${n}) = max(${kcRaw.toFixed(3)}, ${minKc.toFixed(3)}) = ${kc.toFixed(3)} (limited to 1/n)`
+            : `kc = 0.5^${exponent} = ${kc.toFixed(3)} [0.5 (injection) x 0.5^${junctions} (junctions) x 0.5 (DC)]`;
+
+        // Steps breakdown for display
+        const stepsHTML = `
+            <div style="font-size:12px;color:#555;margin-top:4px;line-height:1.7;">
+                Injection point: &times;0.5 &rarr; <strong>${(0.5).toFixed(3)}</strong><br>
+                ${junctions > 0 ? `${junctions} intermediate junction${junctions > 1 ? 's' : ''}: &times;0.5<sup>${junctions}</sup> &rarr; <strong>${Math.pow(0.5, junctions + 1).toFixed(3)}</strong><br>` : 'No intermediate junctions (inside first mesh square)<br>'}
+                At down-conductor: &times;0.5 &rarr; <strong>${kcRaw.toFixed(3)}</strong>
+                ${capped ? `<br><span style="color:#856404;">Limited to minimum 1/n = 1/${n} = ${minKc.toFixed(3)}</span>` : ''}
+            </div>`;
+
+        if (dispEl) dispEl.innerHTML = `<div class="kc-computed">Computed kc = ${kc.toFixed(3)}</div>${stepsHTML}`;
+
+        const warning = capped ? `kc limited to minimum 1/n = ${minKc.toFixed(3)} (n=${n})` : null;
+        if (warnEl) warnEl.innerHTML = warning
+            ? `<div class="warn-note">⚠ Calculated kc (${kcRaw.toFixed(3)}) is below minimum 1/n = ${minKc.toFixed(3)} for n=${n}. Using 1/n.</div>` : '';
+
+        return {
+            kc, kcLabel: kc.toFixed(3),
+            kcSource: `Figure B.4 — Meshed AT (${junctions} intermediate junction${junctions !== 1 ? 's' : ''})`,
+            kcFormula,
+            warning
+        };
+    }
+
+    return { kc:null, kcLabel:'—', kcSource:'Annex B', kcFormula:'', warning:null };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Live recalc — updates the result div for a card
+// ─────────────────────────────────────────────────────────────────────────────
+function recalc(id) {
+    const lpsClass = document.getElementById('lps-class-' + id)?.value;
+    const material = document.getElementById('material-'  + id)?.value;
+    const approach = document.getElementById('approach-'  + id)?.value;
+    const lVal     = parseFloat(document.getElementById('length-' + id)?.value);
+    const resultEl = document.getElementById('result-' + id);
+    if (!resultEl) return;
+
+    let kc, kcLabel, kcSource, kcFormula;
+
+    if (approach === 'simplified') {
+        const numDC = document.getElementById('num-dc-' + id)?.value;
+        kc        = numDC ? KC_SIMPLIFIED[numDC] : null;
+        kcLabel   = kc != null ? kc.toFixed(2) : '—';
+        kcSource  = numDC === '1' ? '1 DC — isolated LPS (Table 13)'
+                  : numDC === '2' ? '2 DCs (Table 13)'
+                  : numDC === '3' ? '3+ DCs (Table 13)' : '-';
+        kcFormula = kc != null ? `kc = ${kcLabel} (Table 13)` : '';
+    } else {
+        const det = computeDetailedKc(id);
+        kc        = det.kc;
+        kcLabel   = det.kcLabel;
+        kcSource  = det.kcSource;
+        kcFormula = det.kcFormula;
+    }
+
+    const ki = lpsClass ? KI[lpsClass] : null;
+    const km = material ? KM[material] : null;
+
+    if (ki == null || km == null || kc == null || isNaN(lVal) || lVal <= 0) {
+        resultEl.innerHTML = '<p class="incomplete-note">Complete all fields above to see the result.</p>';
+        return;
+    }
+
+    const s_m  = (ki / km) * kc * lVal;
+    const s_mm = Math.round(s_m * 1000);
+
+    const actualVal = parseFloat(document.getElementById('actual-' + id)?.value);
+    let complianceHTML = '';
+    if (!isNaN(actualVal) && actualVal > 0) {
+        const pass = actualVal >= s_mm;
+        complianceHTML = `<span class="compliance-badge ${pass ? 'badge-pass' : 'badge-fail'}">${pass ? '✓ PASS' : '✗ FAIL'}</span>`;
+    }
+
+    resultEl.innerHTML = `
+        <div class="result-pill">
+            <div>
+                <span class="result-label">Required Separation Distance</span>
+                <span class="result-value">${s_mm} mm</span>${complianceHTML}
+            </div>
+        </div>
+        <div class="coeff-row">
+            <div class="coeff-chip">ki = <span>${ki.toFixed(2)}</span></div>
+            <div class="coeff-chip">km = <span>${km.toFixed(1)}</span></div>
+            <div class="coeff-chip">kc = <span>${kcLabel}</span></div>
+            <div class="coeff-chip">l = <span>${lVal.toFixed(1)} m</span></div>
+            <div class="coeff-chip">s = <span>(${ki.toFixed(2)} ÷ ${km.toFixed(1)}) × ${kcLabel} × ${lVal.toFixed(1)} = ${s_mm} mm</span></div>
+        </div>
+    `;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Collect data and hand off to PDF generator
+// ─────────────────────────────────────────────────────────────────────────────
+function generateSDPDF() {
+    const cards = document.querySelectorAll('.calc-card');
+    if (!cards.length) {
+        alert('Please add at least one calculation before generating a report.');
+        return;
+    }
+
+    const siteName     = document.getElementById('siteName').value.trim();
+    const siteAddress  = document.getElementById('siteAddress').value.trim();
+    const calcDate     = document.getElementById('calcDate').value;
+    const engineerName = document.getElementById('engineerName').value.trim();
+
+    const calculations = [];
+    cards.forEach(card => {
+        const id       = card.id.replace('calc-card-', '');
+        const lpsClass = document.getElementById('lps-class-' + id)?.value || '';
+        const material = document.getElementById('material-'  + id)?.value || '';
+        const approach = document.getElementById('approach-'  + id)?.value || 'simplified';
+        const lVal     = parseFloat(document.getElementById('length-' + id)?.value);
+        const desc     = (document.getElementById('desc-' + id)?.value || '').trim();
+
+        let kc, kcLabel, kcSource, kcFormula;
+        if (approach === 'simplified') {
+            const numDC = document.getElementById('num-dc-' + id)?.value || '';
+            kc        = numDC ? KC_SIMPLIFIED[numDC] : null;
+            kcLabel   = kc != null ? kc.toFixed(2) : null;
+            kcSource  = numDC === '1' ? '1 DC — isolated LPS (Table 13)'
+                      : numDC === '2' ? '2 DCs (Table 13)'
+                      : numDC === '3' ? '3+ DCs (Table 13)' : '-';
+            kcFormula = kc != null ? `kc = ${kcLabel} (Table 13)` : '';
+        } else {
+            const det = computeDetailedKc(id);
+            kc        = det.kc;
+            kcLabel   = det.kcLabel;
+            kcSource  = det.kcSource;
+            kcFormula = det.kcFormula;
+        }
+
+        const ki = lpsClass ? KI[lpsClass] : null;
+        const km = material ? KM[material] : null;
+
+        let s_mm = null;
+        if (ki != null && km != null && kc != null && !isNaN(lVal) && lVal > 0) {
+            s_mm = Math.round((ki / km) * kc * lVal * 1000);
+        }
+
+        const actualVal  = parseFloat(document.getElementById('actual-' + id)?.value);
+        const actualMm   = isNaN(actualVal) ? null : actualVal;
+        const compliance = (s_mm != null && actualMm != null) ? (actualMm >= s_mm ? 'PASS' : 'FAIL') : null;
+
+        const lpsClassLabel = lpsClass ? `Class ${lpsClass}` : '-';
+        const materialLabel = material === 'air' ? 'Air' : material === 'solid' ? 'Concrete, Bricks or Wood' : '-';
+        const approachLabel = approach === 'simplified'
+            ? 'Simplified — Table 13 (Cl. 6.3.2)'
+            : 'Detailed — Annex B (Cl. 6.3.1)';
+
+        calculations.push({
+            index: calculations.length + 1,
+            desc:  desc || `Calculation ${calculations.length + 1}`,
+            lpsClass, lpsClassLabel,
+            material, materialLabel,
+            approach, approachLabel,
+            ki, km,
+            kc:       kc   != null ? kc   : null,
+            kcLabel:  kcLabel  || '-',
+            kcSource: kcSource || '-',
+            kcFormula: kcFormula || '',
+            l:        isNaN(lVal) ? null : lVal,
+            s_mm, actualMm, compliance
+        });
+    });
+
+    sdGeneratePDF({ siteName, siteAddress, calcDate, engineerName, calculations });
+}
+</script>
+
+</body>
+</html>
