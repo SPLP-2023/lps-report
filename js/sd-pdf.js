@@ -1,11 +1,8 @@
 // =============================================================================
 // sd-pdf.js — Separation Distance Calculator PDF Generator
+// BS EN IEC 62305-3:2024 — Clause 6.3 / Annex B
 // Follows exact T&I / Remedial pattern:
-//   - window._logoBase64 / window._footerBase64 preloaded by HTML page
-//   - Navy header bar + footer bar on every inner page
-//   - Cover: larger logo (no building image), site info card, title card
-//   - One calculation block per entry
-// BS EN 62305-3 (Cl. 6.3) — formula: s = (ki / km) × kc × l
+//   window._logoBase64 / window._footerBase64 preloaded by HTML page
 // =============================================================================
 
 const SD_NAVY        = [13, 27, 42];
@@ -55,7 +52,7 @@ function sdAddImage(pdf, imageData, x, y, maxW, maxH, centre) {
     }
 }
 
-// ── Page header (navy bar, logo right, title centred) ────────────────────────
+// ── Page header ───────────────────────────────────────────────────────────────
 
 function sdAddHeader(pdf, title, subtitle) {
     const barH = 18;
@@ -67,7 +64,7 @@ function sdAddHeader(pdf, title, subtitle) {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(13);
     pdf.setFont(undefined, 'bold');
-    pdf.text(title, SD_PAGE_W / 2, 11, { align: 'center' });
+    pdf.text(sdSafe(title), SD_PAGE_W / 2, 11, { align: 'center' });
     if (subtitle) {
         pdf.setFontSize(7);
         pdf.setFont(undefined, 'normal');
@@ -78,7 +75,7 @@ function sdAddHeader(pdf, title, subtitle) {
     return barH + 6;
 }
 
-// ── Page footer (navy bar, footer logos, company text) ───────────────────────
+// ── Page footer ───────────────────────────────────────────────────────────────
 
 function sdAddFooter(pdf) {
     const barH = 16;
@@ -91,15 +88,13 @@ function sdAddFooter(pdf) {
     pdf.setFontSize(5.5);
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(160, 190, 210);
-    const lines   = pdf.splitTextToSize(SD_FOOTER_TEXT, 180);
-    const lineH   = 3.5;
-    const blockH  = lines.length * lineH;
-    const textY   = barY + (barH / 2) - (blockH / 2) + lineH;
+    const lines  = pdf.splitTextToSize(SD_FOOTER_TEXT, 180);
+    const lineH  = 3.5;
+    const blockH = lines.length * lineH;
+    const textY  = barY + (barH / 2) - (blockH / 2) + lineH;
     pdf.text(lines, SD_PAGE_W / 2, textY, { align: 'center', lineHeightFactor: 1.3 });
     pdf.setTextColor(0, 0, 0);
 }
-
-// ── New page helper ──────────────────────────────────────────────────────────
 
 function sdNewPage(pdf, title, subtitle) {
     pdf.addPage();
@@ -107,7 +102,7 @@ function sdNewPage(pdf, title, subtitle) {
     return sdAddHeader(pdf, title, subtitle);
 }
 
-// ── Section header bar (blue) ────────────────────────────────────────────────
+// ── Blue section header bar ───────────────────────────────────────────────────
 
 function sdSectionBar(pdf, label, x, y, w) {
     pdf.setFillColor(...SD_BLUE);
@@ -120,9 +115,11 @@ function sdSectionBar(pdf, label, x, y, w) {
     return y + 9;
 }
 
-// ── Two-column info field helper ─────────────────────────────────────────────
+// ── Two-column info field ─────────────────────────────────────────────────────
 
-function sdInfoField(pdf, label, value, x, y, colW, labelColor, valueColor) {
+function sdInfoField(pdf, label, value, x, y, colW) {
+    const labelColor = [100, 130, 160];
+    const valueColor = [20, 20, 20];
     pdf.setFontSize(7);
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(...labelColor);
@@ -134,7 +131,7 @@ function sdInfoField(pdf, label, value, x, y, colW, labelColor, valueColor) {
     pdf.text(lines[0], x, y + 12);
 }
 
-// ── COVER PAGE ───────────────────────────────────────────────────────────────
+// ── COVER PAGE ────────────────────────────────────────────────────────────────
 
 function sdBuildCoverPage(pdf, data) {
     const { siteName, siteAddress, calcDate, engineerName } = data;
@@ -143,23 +140,21 @@ function sdBuildCoverPage(pdf, data) {
     pdf.setFillColor(...SD_NAVY);
     pdf.rect(0, 0, SD_PAGE_W, 10, 'F');
 
-    // Logo — larger than other reports to fill space left by absent building image
-    // maxH = 80 (vs 50 in T&I) — centred
+    // Logo — larger than other reports (maxH=80 vs 50 in T&I, no building image)
     let y = 14;
     try {
         if (window._logoBase64) {
             const logoH = sdAddImage(pdf, window._logoBase64, SD_MARGIN, y, SD_PAGE_W - SD_MARGIN * 2, 80, true);
-            y += logoH + 10;
+            y += logoH + 12;
         } else {
-            y += 90;
+            y += 92;
         }
-    } catch(e) { y += 90; }
+    } catch(e) { y += 92; }
 
     const cardX = SD_MARGIN;
     const cardW = SD_PAGE_W - SD_MARGIN * 2;
 
     // Site name
-    y += 4;
     pdf.setFontSize(18);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(...SD_NAVY);
@@ -186,13 +181,12 @@ function sdBuildCoverPage(pdf, data) {
     pdf.setTextColor(255, 255, 255);
     pdf.text('LIGHTNING PROTECTION', SD_PAGE_W / 2, y + 9, { align: 'center' });
     pdf.setFontSize(13);
-    pdf.setFont(undefined, 'bold');
     pdf.setTextColor(...SD_AMBER);
     pdf.text('SEPARATION DISTANCE CALCULATION', SD_PAGE_W / 2, y + 18, { align: 'center' });
     y += titleCardH + 6;
 
     // Standard badge
-    const badgeW = 130;
+    const badgeW = 140;
     const badgeX = (SD_PAGE_W - badgeW) / 2;
     pdf.setFillColor(240, 246, 252);
     pdf.setDrawColor(...SD_BLUE);
@@ -201,10 +195,10 @@ function sdBuildCoverPage(pdf, data) {
     pdf.setFontSize(7.5);
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(...SD_BLUE);
-    pdf.text('BS EN IEC 62305-3  |  Clause 6.3', SD_PAGE_W / 2, y + 6.2, { align: 'center' });
+    pdf.text('BS EN IEC 62305-3:2024  |  Clause 6.3 & Annex B', SD_PAGE_W / 2, y + 6.2, { align: 'center' });
     y += 9 + 6;
 
-    // Info card — Date / Engineer
+    // Info card
     const rowH  = 18;
     const infoH = rowH * 2;
     pdf.setFillColor(250, 252, 255);
@@ -213,146 +207,133 @@ function sdBuildCoverPage(pdf, data) {
     pdf.setLineWidth(0.5);
     pdf.rect(cardX, y, cardW, infoH);
 
-    // Centre divider
     const divX = cardX + cardW / 2;
     pdf.setDrawColor(210, 225, 240);
     pdf.setLineWidth(0.3);
     pdf.line(divX, y + 1, divX, y + infoH - 1);
-
-    // Mid row divider
     pdf.line(cardX + 1, y + rowH, cardX + cardW - 1, y + rowH);
 
-    const col1X     = cardX + 5;
-    const col2X     = cardX + cardW / 2 + 5;
-    const colW      = cardW / 2 - 10;
-    const labelCol  = [100, 130, 160];
-    const valueCol  = [20, 20, 20];
+    const col1X = cardX + 5;
+    const col2X = cardX + cardW / 2 + 5;
+    const colW  = cardW / 2 - 10;
 
-    sdInfoField(pdf, 'Date',     sdFormatDate(calcDate), col1X, y,          colW, labelCol, valueCol);
-    sdInfoField(pdf, 'Engineer', engineerName,            col2X, y,          colW, labelCol, valueCol);
-    sdInfoField(pdf, 'Standard', 'BS EN IEC 62305-3',    col1X, y + rowH,   colW, labelCol, valueCol);
-    sdInfoField(pdf, 'Clause',   '6.3 — Electrical Insulation of External LPS', col2X, y + rowH, colW, labelCol, valueCol);
+    sdInfoField(pdf, 'Date',     sdFormatDate(calcDate), col1X, y,          colW);
+    sdInfoField(pdf, 'Engineer', engineerName,            col2X, y,          colW);
+    sdInfoField(pdf, 'Standard', 'BS EN IEC 62305-3:2024', col1X, y + rowH, colW);
+    sdInfoField(pdf, 'Reference', 'Clause 6.3 & Annex B',  col2X, y + rowH, colW);
 
     sdAddFooter(pdf);
 }
 
-// ── CALCULATIONS PAGE(S) ─────────────────────────────────────────────────────
+// ── CALCULATIONS PAGES ────────────────────────────────────────────────────────
 
 function sdBuildCalculations(pdf, calculations) {
-    const subtitle = 'BS EN IEC 62305-3 | Separation Distance Calculator';
-    let y = sdNewPage(pdf, 'SEPARATION DISTANCE CALCULATIONS', subtitle);
+    const HDR     = 'SEPARATION DISTANCE CALCULATIONS';
+    const HDR_CON = 'SEPARATION DISTANCE CALCULATIONS (CONTINUED)';
+    const SUB     = 'BS EN IEC 62305-3:2024 | Cl. 6.3';
 
-    const cw = SD_PAGE_W - SD_MARGIN * 2;  // content width
+    let y = sdNewPage(pdf, HDR, SUB);
+    const cw      = SD_PAGE_W - SD_MARGIN * 2;
+    const labelW  = cw * 0.50;
+    const rowH    = 8;
 
-    calculations.forEach((calc, idx) => {
-        // Estimate height this block needs (title bar + rows + result bar + gap)
-        const rowH       = 8;
-        const numRows    = 7; // fixed number of data rows
-        const blockH     = 9 + (numRows * rowH) + 14 + 8; // sectionBar + rows + result + gap
-
-        if (y + blockH > SD_PAGE_BOT) {
-            y = sdNewPage(pdf, 'SEPARATION DISTANCE CALCULATIONS (CONTINUED)', subtitle);
-        }
-
-        // Section bar: "Calculation N — description"
-        const label = `Calculation ${calc.index}${calc.desc ? ' — ' + calc.desc : ''}`;
-        y = sdSectionBar(pdf, label, SD_MARGIN, y, cw);
-
-        // Data rows
-        const rows = [
-            ['LPS Class',              calc.lpsClassLabel || '-'],
-            ['Insulation Material',    calc.materialLabel || '-'],
-            ['Approach',               calc.approachLabel || '-'],
-            ['kc Source',              calc.kcSource || '-'],
-            ['ki (LPS class factor)',  calc.ki != null ? calc.ki.toFixed(2) : '-'],
-            ['km (material factor)',   calc.km != null ? calc.km.toFixed(1) : '-'],
-            ['kc (current partition)', calc.kc != null ? calc.kc.toFixed(2) : '-'],
+    calculations.forEach(calc => {
+        // Rows we'll draw
+        const dataRows = [
+            ['LPS Class',               calc.lpsClassLabel || '-'],
+            ['Insulation Material',     calc.materialLabel || '-'],
+            ['kc Approach',             calc.approachLabel || '-'],
+            ['kc Source',               calc.kcSource      || '-'],
+            ['ki (LPS class factor)',    calc.ki != null ? calc.ki.toFixed(2) : '-'],
+            ['km (material factor)',     calc.km != null ? calc.km.toFixed(1) : '-'],
+            ['kc (current partition)',   calc.kcLabel || '-'],
+            ['l  (conductor length)',    calc.l != null ? `${calc.l.toFixed(1)} m` : '-'],
         ];
 
-        const labelW = cw * 0.5;
-        const valW   = cw - labelW;
+        const formulaLine  = calc.kcFormula ? 1 : 0;
+        const actualLine   = calc.actualMm != null ? 1 : 0;
+        const blockH = 9 + (dataRows.length * rowH) + 4 + (formulaLine * 6) + 14 + (actualLine * 7) + 10;
 
-        rows.forEach((row, i) => {
-            const bg = i % 2 === 0 ? [255, 255, 255] : [244, 248, 252];
+        if (y + blockH > SD_PAGE_BOT) {
+            y = sdNewPage(pdf, HDR_CON, SUB);
+        }
+
+        // Section bar with calc index and description
+        const barLabel = `Calculation ${calc.index}${calc.desc ? ' — ' + calc.desc : ''}`;
+        y = sdSectionBar(pdf, barLabel, SD_MARGIN, y, cw);
+
+        // Data rows
+        const tableTopY = y;
+        dataRows.forEach((row, i) => {
+            const bg = i % 2 === 0 ? [255,255,255] : [244,248,252];
             pdf.setFillColor(...bg);
             pdf.rect(SD_MARGIN, y, cw, rowH, 'F');
-
             pdf.setFontSize(8.5);
             pdf.setFont(undefined, 'bold');
             pdf.setTextColor(60, 60, 60);
             pdf.text(sdSafe(row[0]), SD_MARGIN + 3, y + 5.5);
-
             pdf.setFont(undefined, 'normal');
             pdf.setTextColor(20, 20, 20);
-            pdf.text(sdSafe(row[1]), SD_MARGIN + labelW + 3, y + 5.5);
-
+            const val = pdf.splitTextToSize(sdSafe(row[1]), labelW - 4)[0] || '';
+            pdf.text(val, SD_MARGIN + labelW + 3, y + 5.5);
             y += rowH;
         });
 
-        // Length row — highlighted slightly
-        pdf.setFillColor(240, 246, 252);
-        pdf.rect(SD_MARGIN, y, cw, rowH, 'F');
-        pdf.setFontSize(8.5);
-        pdf.setFont(undefined, 'bold');
-        pdf.setTextColor(60, 60, 60);
-        pdf.text('Length l (along conductor to nearest bond point)', SD_MARGIN + 3, y + 5.5);
-        pdf.setFont(undefined, 'normal');
-        pdf.setTextColor(20, 20, 20);
-        pdf.text(calc.l != null ? `${calc.l.toFixed(1)} m` : '-', SD_MARGIN + labelW + 3, y + 5.5);
-        y += rowH;
-
-        // Outer border around all rows
+        // Table border + column divider
         pdf.setDrawColor(...SD_BLUE);
         pdf.setLineWidth(0.3);
-        pdf.rect(SD_MARGIN, y - (rowH * (numRows + 1)), cw, rowH * (numRows + 1));
-        // Divider between label and value columns
-        pdf.line(SD_MARGIN + labelW, y - (rowH * (numRows + 1)), SD_MARGIN + labelW, y);
+        pdf.rect(SD_MARGIN, tableTopY, cw, y - tableTopY);
+        pdf.line(SD_MARGIN + labelW, tableTopY, SD_MARGIN + labelW, y);
 
         y += 3;
 
         // Formula line
-        if (calc.ki != null && calc.km != null && calc.kc != null && calc.l != null) {
-            pdf.setFontSize(8);
+        if (calc.kcFormula) {
+            pdf.setFontSize(7.5);
             pdf.setFont(undefined, 'italic');
             pdf.setTextColor(80, 80, 80);
-            const formula = `s = (ki / km) x kc x l = (${calc.ki.toFixed(2)} / ${calc.km.toFixed(1)}) x ${calc.kc.toFixed(2)} x ${calc.l.toFixed(1)} m`;
-            pdf.text(sdSafe(formula), SD_MARGIN, y + 4);
-            y += 8;
+            pdf.text(sdSafe('kc formula: ' + calc.kcFormula), SD_MARGIN, y + 4);
+            y += 7;
+        }
+
+        // s formula line
+        if (calc.ki != null && calc.km != null && calc.kc != null && calc.l != null) {
+            pdf.setFontSize(7.5);
+            pdf.setFont(undefined, 'italic');
+            pdf.setTextColor(80, 80, 80);
+            const sFormula = `s = (ki/km) x kc x l = (${calc.ki.toFixed(2)}/${calc.km.toFixed(1)}) x ${calc.kcLabel} x ${calc.l.toFixed(1)} m`;
+            pdf.text(sdSafe(sFormula), SD_MARGIN, y + 4);
+            y += 7;
         }
 
         // Result bar
+        const resultH = 13;
         if (calc.s_mm != null) {
-            const resultH = 13;
             pdf.setFillColor(...SD_NAVY);
             pdf.rect(SD_MARGIN, y, cw, resultH, 'F');
 
-            // Required distance
-            pdf.setFontSize(10);
+            pdf.setFontSize(9);
             pdf.setFont(undefined, 'bold');
             pdf.setTextColor(255, 255, 255);
             pdf.text('Required Separation Distance:', SD_MARGIN + 4, y + 8.5);
 
-            const resultText = `${calc.s_mm} mm`;
             pdf.setFontSize(13);
             pdf.setTextColor(...SD_AMBER);
-            pdf.text(resultText, SD_PAGE_W / 2, y + 8.5, { align: 'center' });
+            pdf.text(`${calc.s_mm} mm`, SD_PAGE_W / 2, y + 8.5, { align: 'center' });
 
-            // Compliance badge (right side)
             if (calc.compliance) {
-                const isPass  = calc.compliance === 'PASS';
-                const badgeW  = 24;
-                const badgeX  = SD_PAGE_W - SD_MARGIN - badgeW;
+                const isPass = calc.compliance === 'PASS';
+                const bW     = 26;
+                const bX     = SD_PAGE_W - SD_MARGIN - bW;
                 pdf.setFillColor(...(isPass ? SD_GREEN : SD_RED));
-                pdf.rect(badgeX, y + 2, badgeW, 9, 'F');
+                pdf.rect(bX, y + 2, bW, 9, 'F');
                 pdf.setFontSize(8);
                 pdf.setFont(undefined, 'bold');
                 pdf.setTextColor(255, 255, 255);
-                pdf.text(calc.compliance, badgeX + badgeW / 2, y + 7.8, { align: 'center' });
+                pdf.text(calc.compliance, bX + bW / 2, y + 7.8, { align: 'center' });
             }
-
             y += resultH;
 
-            // Actual distance note if entered
             if (calc.actualMm != null) {
                 pdf.setFontSize(7.5);
                 pdf.setFont(undefined, 'normal');
@@ -362,8 +343,6 @@ function sdBuildCalculations(pdf, calculations) {
                 y += 8;
             }
         } else {
-            // Incomplete data
-            const resultH = 13;
             pdf.setFillColor(180, 180, 180);
             pdf.rect(SD_MARGIN, y, cw, resultH, 'F');
             pdf.setFontSize(9);
@@ -373,42 +352,41 @@ function sdBuildCalculations(pdf, calculations) {
             y += resultH;
         }
 
-        y += 10; // gap between calculations
+        y += 10;
     });
-
-    return y;
 }
 
-// ── SUMMARY TABLE PAGE ────────────────────────────────────────────────────────
+// ── SUMMARY TABLE ─────────────────────────────────────────────────────────────
 
 function sdBuildSummary(pdf, calculations) {
-    const subtitle = 'BS EN IEC 62305-3 | Separation Distance Calculator';
-    let y = sdNewPage(pdf, 'CALCULATION SUMMARY', subtitle);
-
+    const SUB = 'BS EN IEC 62305-3:2024 | Cl. 6.3';
+    let y = sdNewPage(pdf, 'CALCULATION SUMMARY', SUB);
     const cw = SD_PAGE_W - SD_MARGIN * 2;
 
-    // Summary table header
-    const colWidths = [8, 50, 20, 20, 20, 20, 30, 24];
-    // No., Description, ki, km, kc, l(m), s(mm), Compliance
-    const headers = ['No.', 'Description', 'ki', 'km', 'kc', 'l (m)', 's (mm)', 'Status'];
-    const headerH = 9;
+    // Column widths: No. | Description | ki | km | kc | l(m) | s(mm) | Status
+    // Total must equal cw (182mm): 8+50+13+13+13+16+22+47 = 182
+    const cols   = [8, 50, 13, 13, 13, 16, 22, 47];
+    const hdrs   = ['No.', 'Description', 'ki', 'km', 'kc', 'l (m)', 's (mm)', 'Status'];
+    const hdrH   = 9;
+    const rowH   = 9;
 
+    // Header row
     pdf.setFillColor(...SD_BLUE);
-    pdf.rect(SD_MARGIN, y, cw, headerH, 'F');
+    pdf.rect(SD_MARGIN, y, cw, hdrH, 'F');
     pdf.setFontSize(7.5);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(255, 255, 255);
-
     let cx = SD_MARGIN;
-    headers.forEach((h, i) => {
-        pdf.text(h, cx + colWidths[i] / 2, y + 6.2, { align: 'center' });
-        cx += colWidths[i];
+    hdrs.forEach((h, i) => {
+        pdf.text(sdSafe(h), cx + cols[i] / 2, y + 6.2, { align: 'center' });
+        cx += cols[i];
     });
-    y += headerH;
+    y += hdrH;
 
-    const rowH = 9;
+    const tableTopY = y;
+
     calculations.forEach((calc, idx) => {
-        const bg = idx % 2 === 0 ? [255, 255, 255] : [244, 248, 252];
+        const bg = idx % 2 === 0 ? [255,255,255] : [244,248,252];
         pdf.setFillColor(...bg);
         pdf.rect(SD_MARGIN, y, cw, rowH, 'F');
 
@@ -421,59 +399,53 @@ function sdBuildSummary(pdf, calculations) {
             calc.desc || '-',
             calc.ki != null ? calc.ki.toFixed(2) : '-',
             calc.km != null ? calc.km.toFixed(1) : '-',
-            calc.kc != null ? calc.kc.toFixed(2) : '-',
+            calc.kcLabel || '-',
             calc.l  != null ? calc.l.toFixed(1)  : '-',
-            calc.s_mm != null ? String(calc.s_mm) : '-',
+            calc.s_mm != null ? `${calc.s_mm}` : '-',
             calc.compliance || '-'
         ];
 
         cx = SD_MARGIN;
         cells.forEach((cell, i) => {
             if (i === 7 && calc.compliance) {
-                // Colour the compliance cell
                 const isPass = calc.compliance === 'PASS';
                 pdf.setTextColor(...(isPass ? SD_GREEN : SD_RED));
                 pdf.setFont(undefined, 'bold');
-                pdf.text(sdSafe(cell), cx + colWidths[i] / 2, y + 6.2, { align: 'center' });
+                pdf.text(sdSafe(cell), cx + cols[i] / 2, y + 6.2, { align: 'center' });
                 pdf.setFont(undefined, 'normal');
                 pdf.setTextColor(20, 20, 20);
             } else {
-                const truncated = pdf.splitTextToSize(sdSafe(cell), colWidths[i] - 2)[0] || '';
-                pdf.text(truncated, cx + colWidths[i] / 2, y + 6.2, { align: 'center' });
+                const t = pdf.splitTextToSize(sdSafe(cell), cols[i] - 2)[0] || '';
+                pdf.text(t, cx + cols[i] / 2, y + 6.2, { align: 'center' });
             }
-            cx += colWidths[i];
+            cx += cols[i];
         });
-
         y += rowH;
     });
 
-    // Table border
+    // Table border + column dividers
     pdf.setDrawColor(...SD_BLUE);
     pdf.setLineWidth(0.3);
-    pdf.rect(SD_MARGIN, y - rowH * calculations.length - headerH, cw, rowH * calculations.length + headerH);
-
-    // Column dividers
+    pdf.rect(SD_MARGIN, tableTopY - hdrH, cw, y - tableTopY + hdrH);
     cx = SD_MARGIN;
-    const tableTop    = y - rowH * calculations.length - headerH;
-    const tableBottom = y;
-    colWidths.slice(0, -1).forEach(w => {
+    cols.slice(0, -1).forEach(w => {
         cx += w;
-        pdf.line(cx, tableTop, cx, tableBottom);
+        pdf.line(cx, tableTopY - hdrH, cx, y);
     });
 
     y += 8;
 
-    // Formula reference note
-    pdf.setFontSize(8);
+    // Formula reference
+    pdf.setFontSize(7.5);
     pdf.setFont(undefined, 'italic');
     pdf.setTextColor(100, 100, 100);
-    pdf.text('Formula: s = (ki / km) x kc x l   (BS EN IEC 62305-3, Equation 4)', SD_MARGIN, y);
+    pdf.text('Formula (Eq. 6, Cl. 6.3.2): s = (ki / km) x kc x l', SD_MARGIN, y);
     y += 5;
-    pdf.text('ki: LPS class factor | km: insulation material factor | kc: current partition coefficient | l: conductor length (m) | s: separation distance', SD_MARGIN, y);
+    pdf.text('ki: LPS class factor (Table 11)  |  km: insulation material factor (Table 12)  |  kc: current partition coefficient (Table 13 or Annex B)  |  l: conductor length (m)', SD_MARGIN, y, { maxWidth: cw });
     pdf.setTextColor(0, 0, 0);
 }
 
-// ── MAIN ENTRY POINT ─────────────────────────────────────────────────────────
+// ── MAIN ENTRY POINT ──────────────────────────────────────────────────────────
 
 function sdGeneratePDF(data) {
     const { siteName, siteAddress, calcDate, engineerName, calculations } = data;
@@ -481,19 +453,19 @@ function sdGeneratePDF(data) {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    // Page 1: Cover
+    // Cover page
     sdBuildCoverPage(pdf, { siteName, siteAddress, calcDate, engineerName });
 
-    // Page 2+: Individual calculations
+    // Calculation pages
     sdBuildCalculations(pdf, calculations);
 
-    // Final page: Summary table (only if more than 1 calculation)
+    // Summary table (only if 2+ calculations)
     if (calculations.length > 1) {
         sdBuildSummary(pdf, calculations);
     }
 
     // Filename: SD Calc - [SiteName] [dd-mm-yy].pdf
-    const datePart  = sdFormatDateShort(calcDate);
-    const namePart  = (siteName || 'Report').replace(/[^a-zA-Z0-9 \-_]/g, '').trim().substring(0, 40);
+    const datePart = sdFormatDateShort(calcDate);
+    const namePart = (siteName || 'Report').replace(/[^a-zA-Z0-9 \-_]/g, '').trim().substring(0, 40);
     pdf.save(`SD Calc - ${namePart} ${datePart}.pdf`);
 }
