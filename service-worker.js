@@ -1,11 +1,12 @@
 // StrikeR Service Worker
-const CACHE_NAME = 'striker-ti-v3.1.4';
+const CACHE_NAME = 'striker-ti-v3.2.0';
 const ASSETS = [
     './',
     './index.html',
     './reports.html',
     './tools.html',
     './ti-report.html',
+    './separation-distance.html',
     './css/styles.css',
     './css/drawing.css',
     './js/data.js',
@@ -16,6 +17,7 @@ const ASSETS = [
     './js/survey-drawing-script.js',
     './js/drawing-pdf.js',
     './js/ti-drawing-script.js',
+    './js/sd-pdf.js',
     './manifest.json',
     './assets/Color logo - no background (px reduction).png',
     './assets/SP Bolt 400x400.png',
