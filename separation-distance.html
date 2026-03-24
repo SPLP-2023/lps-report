@@ -280,7 +280,7 @@ function buildCardHTML(id) {
                             <option value="B1">Figure B.1 — Wire air-termination system</option>
                             <option value="B2">Figure B.2 — Multiple down-conductors with ring conductors</option>
                             <option value="B3">Figure B.3 — Multiple interconnecting ring levels</option>
-                            <option value="B4">Figure B.4 — Meshed air-termination system (manual)</option>
+                            <option value="B4">Figure B.4 — Meshed air-termination system (roof bond item)</option>
                         </select>
                     </div>
 
@@ -377,29 +377,38 @@ function buildCardHTML(id) {
                         <div id="b3-kc-${id}"></div>
                     </div>
 
-                    <!-- ── Figure B.4: Meshed AT — manual kc ── -->
+                    <!-- ── Figure B.4: Meshed AT — computed from roof geometry ── -->
                     <div id="fig-b4-${id}" style="display:none;">
                         <div class="info-note">
-                            <strong>Figure B.4 — Meshed air-termination system</strong><br>
-                            Determine kc by tracing the current path through the mesh from the strike point
-                            to the down-conductor using the current-division rules in Figure B.4 of
-                            BS EN IEC 62305-3:2024:<br>
-                            &bull; At the injection point: current divides equally into all possible paths<br>
-                            &bull; At each further mesh junction: current reduces by 50%<br>
-                            &bull; At the down-conductor: reduces by 50% again<br>
-                            Minimum kc = 1/n (n = total number of down-conductors)
+                            <strong>Figure B.4 — Meshed air-termination system (roof bond item)</strong><br>
+                            For a bond item located on the roof inside the AT mesh. Current-division rules (Figure B.4):<br>
+                            &bull; At the strike/injection point: worst-case path carries <strong>0.5</strong> of total current<br>
+                            &bull; At each intermediate mesh junction crossed: &times; 0.5<br>
+                            &bull; At the down-conductor: &times; 0.5<br>
+                            &bull; Minimum kc = 1/n<br>
+                            <em>Formula: kc = 0.5 &times; 0.5<sup>(junctions+1)</sup>, subject to minimum 1/n</em><br><br>
+                            <strong>Note:</strong> Length <em>l</em> above should include the roof conductor run from the bond item
+                            to the perimeter plus the DC length to the nearest bonding point.
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>n <span class="sub-label">(total DCs — for minimum kc check)</span></label>
-                                <input type="number" id="b4-n-${id}" min="1" step="1" placeholder="e.g. 24" oninput="recalc(${id})">
+                                <label>n <span class="sub-label">(total down-conductors)</span></label>
+                                <input type="number" id="b4-n-${id}" min="1" step="1" placeholder="e.g. 11" oninput="recalc(${id})">
                             </div>
                             <div class="form-group">
-                                <label>kc <span class="sub-label">(from Figure B.4 current path analysis)</span></label>
-                                <input type="number" id="b4-kc-${id}" min="0" max="1" step="0.001"
-                                    placeholder="e.g. 0.125" oninput="recalc(${id})">
+                                <label>Mesh squares crossed to perimeter <span class="sub-label">(0 = inside first square)</span></label>
+                                <select id="b4-squares-${id}" onchange="recalc(${id})">
+                                    <option value="">Select...</option>
+                                    <option value="0">0 — bond item inside first mesh square (no intermediate junctions)</option>
+                                    <option value="1">1 — crosses one intermediate mesh junction</option>
+                                    <option value="2">2 — crosses two intermediate mesh junctions</option>
+                                    <option value="3">3 — crosses three intermediate mesh junctions</option>
+                                    <option value="4">4 — crosses four intermediate mesh junctions</option>
+                                    <option value="5">5 — crosses five or more intermediate mesh junctions</option>
+                                </select>
                             </div>
                         </div>
+                        <div id="b4-kc-display-${id}"></div>
                         <div id="b4-warn-${id}"></div>
                     </div>
 
@@ -570,26 +579,53 @@ function computeDetailedKc(id) {
         };
     }
 
-    // ── Figure B.4: Meshed AT — manual entry ────────────────────────────────
+    // ── Figure B.4: Meshed AT — computed from roof geometry ─────────────────
     if (fig === 'B4') {
-        const n      = parseInt(document.getElementById('b4-n-'  + id).value);
-        const manual = parseFloat(document.getElementById('b4-kc-' + id).value);
-        const warnEl = document.getElementById('b4-warn-' + id);
-        if (isNaN(manual)) {
+        const n       = parseInt(document.getElementById('b4-n-'       + id).value);
+        const squares = document.getElementById('b4-squares-' + id).value;
+        const dispEl  = document.getElementById('b4-kc-display-' + id);
+        const warnEl  = document.getElementById('b4-warn-' + id);
+
+        if (isNaN(n) || n <= 0 || squares === '') {
+            if (dispEl) dispEl.innerHTML = '';
             if (warnEl) warnEl.innerHTML = '';
-            return { kc:null, kcLabel:'—', kcSource:'Figure B.4 — Meshed AT (manual)', kcFormula:'', warning:null };
+            return { kc:null, kcLabel:'—', kcSource:'Figure B.4 — Meshed AT', kcFormula:'', warning:null };
         }
-        let warning = null;
-        if (!isNaN(n) && n > 0 && manual < 1 / n) {
-            warning = `kc = ${manual} is less than minimum 1/n = ${(1/n).toFixed(3)} for n=${n}`;
-            if (warnEl) warnEl.innerHTML = `<div class="warn-note">⚠ ${warning}. Per Figure B.4 kc must not be less than 1/n.</div>`;
-        } else {
-            if (warnEl) warnEl.innerHTML = '';
-        }
+
+        const junctions  = parseInt(squares);   // intermediate mesh junctions crossed
+        const minKc      = 1 / n;
+
+        // kc = 0.5 (injection) × 0.5^junctions (intermediate) × 0.5 (at DC)
+        // = 0.5^(junctions + 2)
+        const kcRaw  = Math.pow(0.5, junctions + 2);
+        const kc     = Math.max(kcRaw, minKc);  // never below 1/n
+        const capped = kcRaw < minKc;
+
+        // Build formula string
+        const exponent   = junctions + 2;
+        const kcFormula  = capped
+            ? `kc = max(0.5^${exponent}, 1/${n}) = max(${kcRaw.toFixed(3)}, ${minKc.toFixed(3)}) = ${kc.toFixed(3)} (limited to 1/n)`
+            : `kc = 0.5^${exponent} = ${kc.toFixed(3)} [0.5 (injection) x 0.5^${junctions} (junctions) x 0.5 (DC)]`;
+
+        // Steps breakdown for display
+        const stepsHTML = `
+            <div style="font-size:12px;color:#555;margin-top:4px;line-height:1.7;">
+                Injection point: &times;0.5 &rarr; <strong>${(0.5).toFixed(3)}</strong><br>
+                ${junctions > 0 ? `${junctions} intermediate junction${junctions > 1 ? 's' : ''}: &times;0.5<sup>${junctions}</sup> &rarr; <strong>${Math.pow(0.5, junctions + 1).toFixed(3)}</strong><br>` : 'No intermediate junctions (inside first mesh square)<br>'}
+                At down-conductor: &times;0.5 &rarr; <strong>${kcRaw.toFixed(3)}</strong>
+                ${capped ? `<br><span style="color:#856404;">Limited to minimum 1/n = 1/${n} = ${minKc.toFixed(3)}</span>` : ''}
+            </div>`;
+
+        if (dispEl) dispEl.innerHTML = `<div class="kc-computed">Computed kc = ${kc.toFixed(3)}</div>${stepsHTML}`;
+
+        const warning = capped ? `kc limited to minimum 1/n = ${minKc.toFixed(3)} (n=${n})` : null;
+        if (warnEl) warnEl.innerHTML = warning
+            ? `<div class="warn-note">⚠ Calculated kc (${kcRaw.toFixed(3)}) is below minimum 1/n = ${minKc.toFixed(3)} for n=${n}. Using 1/n.</div>` : '';
+
         return {
-            kc: manual, kcLabel: manual.toFixed(3),
-            kcSource: 'Figure B.4 — Meshed AT (manual entry)',
-            kcFormula: `kc = ${manual.toFixed(3)} (manual)`,
+            kc, kcLabel: kc.toFixed(3),
+            kcSource: `Figure B.4 — Meshed AT (${junctions} intermediate junction${junctions !== 1 ? 's' : ''})`,
+            kcFormula,
             warning
         };
     }
