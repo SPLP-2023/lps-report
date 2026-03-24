@@ -238,7 +238,7 @@ function sdBuildCalculations(pdf, calculations) {
     const rowH    = 8;
 
     calculations.forEach(calc => {
-        // Rows we'll draw
+        // Rows — actual distance included only if entered
         const dataRows = [
             ['LPS Class',               calc.lpsClassLabel || '-'],
             ['Insulation Material',     calc.materialLabel || '-'],
@@ -248,11 +248,11 @@ function sdBuildCalculations(pdf, calculations) {
             ['km (material factor)',     calc.km != null ? calc.km.toFixed(1) : '-'],
             ['kc (current partition)',   calc.kcLabel || '-'],
             ['l  (conductor length)',    calc.l != null ? `${calc.l.toFixed(1)} m` : '-'],
+            ...(calc.actualMm != null ? [['Actual distance available', `${calc.actualMm} mm`]] : []),
         ];
 
         const formulaLine  = calc.kcFormula ? 1 : 0;
-        const actualLine   = calc.actualMm != null ? 1 : 0;
-        const blockH = 9 + (dataRows.length * rowH) + 4 + (formulaLine * 6) + 14 + (actualLine * 7) + 10;
+        const blockH = 9 + (dataRows.length * rowH) + 4 + (formulaLine * 6) + 14 + 10;
 
         if (y + blockH > SD_PAGE_BOT) {
             y = sdNewPage(pdf, HDR_CON, SUB);
@@ -307,48 +307,45 @@ function sdBuildCalculations(pdf, calculations) {
         }
 
         // Result bar
-        const resultH = 13;
+        const resultH = 14;
         if (calc.s_mm != null) {
             pdf.setFillColor(...SD_NAVY);
             pdf.rect(SD_MARGIN, y, cw, resultH, 'F');
 
-            pdf.setFontSize(9);
+            // Label — left
+            pdf.setFontSize(10);
             pdf.setFont(undefined, 'bold');
             pdf.setTextColor(255, 255, 255);
-            pdf.text('Required Separation Distance:', SD_MARGIN + 4, y + 8.5);
+            pdf.text('Required Separation Distance:', SD_MARGIN + 4, y + 9);
 
-            pdf.setFontSize(13);
+            // Result value — centred, large amber
+            pdf.setFontSize(16);
+            pdf.setFont(undefined, 'bold');
             pdf.setTextColor(...SD_AMBER);
-            pdf.text(`${calc.s_mm} mm`, SD_PAGE_W / 2, y + 8.5, { align: 'center' });
+            pdf.text(`${calc.s_mm} mm`, SD_PAGE_W / 2, y + 9.5, { align: 'center' });
 
+            // PASS/FAIL badge — right, smaller box
             if (calc.compliance) {
                 const isPass = calc.compliance === 'PASS';
-                const bW     = 26;
+                const bW     = 20;
+                const bH     = 7;
                 const bX     = SD_PAGE_W - SD_MARGIN - bW;
+                const bY     = y + (resultH - bH) / 2;
                 pdf.setFillColor(...(isPass ? SD_GREEN : SD_RED));
-                pdf.rect(bX, y + 2, bW, 9, 'F');
-                pdf.setFontSize(8);
+                pdf.rect(bX, bY, bW, bH, 'F');
+                pdf.setFontSize(10);
                 pdf.setFont(undefined, 'bold');
                 pdf.setTextColor(255, 255, 255);
-                pdf.text(calc.compliance, bX + bW / 2, y + 7.8, { align: 'center' });
+                pdf.text(calc.compliance, bX + bW / 2, bY + 5.2, { align: 'center' });
             }
             y += resultH;
-
-            if (calc.actualMm != null) {
-                pdf.setFontSize(7.5);
-                pdf.setFont(undefined, 'normal');
-                pdf.setTextColor(80, 80, 80);
-                const note = `Actual distance available: ${calc.actualMm} mm — ${calc.compliance === 'PASS' ? 'Compliant (actual >= required)' : 'Non-compliant (actual < required)'}`;
-                pdf.text(sdSafe(note), SD_MARGIN, y + 5);
-                y += 8;
-            }
         } else {
             pdf.setFillColor(180, 180, 180);
             pdf.rect(SD_MARGIN, y, cw, resultH, 'F');
             pdf.setFontSize(9);
             pdf.setFont(undefined, 'italic');
             pdf.setTextColor(255, 255, 255);
-            pdf.text('Incomplete data — result not available', SD_PAGE_W / 2, y + 8.5, { align: 'center' });
+            pdf.text('Incomplete data — result not available', SD_PAGE_W / 2, y + 9, { align: 'center' });
             y += resultH;
         }
 
