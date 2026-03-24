@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Separation Distance — StrikeR</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" type="image/png" href="assets/SP Bolt 400x400.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="StrikeR">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <style>
+        /* ── Calculation card ── */
+        .calc-card {
+            background: white;
+            border: 1.5px solid #dee2e6;
+            border-radius: 10px;
+            margin-bottom: 18px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .calc-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, #0d1b2a 0%, #0877c3 100%);
+            padding: 11px 16px;
+            gap: 10px;
+        }
+        .calc-card-title {
+            color: white;
+            font-weight: 700;
+            font-size: 1em;
+        }
+        .calc-card-body {
+            padding: 16px;
+        }
+        .calc-delete-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            border-radius: 5px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .calc-delete-btn:hover {
+            background: rgba(220,53,69,0.7);
+            transform: none;
+        }
+
+        /* ── Result pill ── */
+        .result-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+            padding: 10px 18px;
+            border-radius: 8px;
+            background: #e8f4fd;
+            border: 1.5px solid #0877c3;
+            font-size: 1em;
+        }
+        .result-pill .result-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #0d1b2a;
+        }
+        .result-pill .result-label {
+            color: #555;
+            font-size: 0.88em;
+        }
+        .compliance-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 5px;
+            font-weight: 700;
+            font-size: 0.9em;
+            margin-left: 6px;
+        }
+        .badge-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #28a745;
+        }
+        .badge-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #dc3545;
+        }
+
+        /* ── Coefficient display row ── */
+        .coeff-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .coeff-chip {
+            background: #f0f4f8;
+            border: 1px solid #cdd5df;
+            border-radius: 5px;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: #495057;
+        }
+        .coeff-chip span {
+            font-weight: 700;
+            color: #0877c3;
+        }
+
+        /* ── Detailed kc field visibility ── */
+        .kc-simplified { display: block; }
+        .kc-detailed   { display: none;  }
+
+        /* ── Add calculation button ── */
+        .add-calc-btn {
+            background: linear-gradient(135deg, #0d1b2a 0%, #0877c3 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 80px;
+            transition: filter 0.2s;
+        }
+        .add-calc-btn:hover {
+            filter: brightness(1.12);
+            transform: none;
+        }
+
+        /* ── Info note ── */
+        .info-note {
+            background: #f0f8ff;
+            border-left: 3px solid #0877c3;
+            border-radius: 0 5px 5px 0;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #555;
+            margin-top: 6px;
+        }
+
+        /* ── Empty state ── */
+        .no-calcs {
+            text-align: center;
+            padding: 40px 20px;
+            color: #aaa;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="nav-header">
+        <button class="nav-button back-button" onclick="location.href='tools.html'">← Tools</button>
+        <button class="nav-button" onclick="location.href='reports.html'">Reports</button>
+    </div>
+
+    <h1>Separation Distance Calculator</h1>
+
+    <!-- ===================== SITE INFORMATION ===================== -->
+    <div class="section" id="sec-site">
+        <button class="section-header" onclick="toggleSection('sec-site')">
+            <span class="section-title">📋 Site Information <span style="font-weight:400;font-size:0.85em;opacity:0.75;">(optional)</span></span>
+            <span class="section-right"><span class="status-dot" id="dot-sec-site"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="siteName">Site Name:</label>
+                    <input type="text" id="siteName" placeholder="e.g. Upper Norwood Library..."
+                        oninput="this.value=this.value.replace(/(?:^|\s)\S/g,c=>c.toUpperCase())">
+                </div>
+                <div class="form-group">
+                    <label for="calcDate">Date:</label>
+                    <input type="date" id="calcDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="siteAddress">Site Address:</label>
+                <textarea id="siteAddress" rows="3" placeholder="Enter site address..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="engineerName">Engineer Name:</label>
+                <input type="text" id="engineerName" placeholder="Enter engineer name..."
+                    oninput="this.value=this.value.replace(/(?:^|\s)\S/g,c=>c.toUpperCase())">
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== CALCULATIONS ===================== -->
+    <div class="section expanded" id="sec-calcs">
+        <button class="section-header" onclick="toggleSection('sec-calcs')">
+            <span class="section-title">📐 Calculations</span>
+            <span class="section-right"><span class="status-dot dot-filled" id="dot-sec-calcs"></span><span class="chevron">▾</span></span>
+        </button>
+        <div class="section-body open" id="calc-section-body">
+            <div id="calc-cards-container">
+                <div class="no-calcs" id="no-calcs-msg">No calculations yet. Use the button below to add one.</div>
+            </div>
+        </div>
+    </div>
+
+    <button class="add-calc-btn" onclick="addCalcCard()">+ Add Calculation</button>
+
+    <!-- ===================== STICKY FOOTER ===================== -->
+    <div class="sticky-generate">
+        <button onclick="generateSDPDF()">📄 Generate PDF Report</button>
+    </div>
+
+</div>
+
+<!-- ===================== SCRIPTS ===================== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/sd-pdf.js"></script>
+
+<script>
+// ── Branding preload (same pattern as T&I / Remedial) ──
+async function blobToBase64(blob) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+    });
+}
+async function preloadBrandingImages() {
+    try {
+        const [logoBlob, footerBlob] = await Promise.all([
+            fetch('./assets/Color logo - no background (px reduction).png').then(r => r.blob()),
+            fetch('./assets/es12nobackground.png').then(r => r.blob())
+        ]);
+        window._logoBase64   = await blobToBase64(logoBlob);
+        window._footerBase64 = await blobToBase64(footerBlob);
+    } catch(e) {
+        console.error('Failed to preload branding images:', e);
+    }
+}
+preloadBrandingImages();
+</script>
+
+<script>
+// ── Section toggle (same pattern as all other reports) ──
+function toggleSection(id) {
+    const section = document.getElementById(id);
+    const body    = section.querySelector('.section-body');
+    const chevron = section.querySelector('.chevron');
+    const isOpen  = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    section.classList.toggle('expanded', !isOpen);
+    if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+// Open site section chevron state on load
+document.addEventListener('DOMContentLoaded', () => {
+    // calcs section starts open
+    const calcChevron = document.querySelector('#sec-calcs .chevron');
+    if (calcChevron) calcChevron.style.transform = 'rotate(180deg)';
+});
+</script>
+
+<script>
+// ── Coefficient lookup tables (BS EN 62305-3:2011 / :2024 Cl.6.3) ──
+const KI = { 'I': 0.08, 'II': 0.06, 'III': 0.04, 'IV': 0.04 };
+const KM = { 'air': 1.0, 'solid': 0.5 };
+const KC_SIMPLIFIED = { '1': 1.0, '2': 0.66, '3': 0.44 };
+
+let calcCounter = 0;
+
+function addCalcCard() {
+    calcCounter++;
+    const id = calcCounter;
+
+    const noMsg = document.getElementById('no-calcs-msg');
+    if (noMsg) noMsg.remove();
+
+    const container = document.getElementById('calc-cards-container');
+    const card = document.createElement('div');
+    card.className = 'calc-card';
+    card.id = 'calc-card-' + id;
+    card.innerHTML = `
+        <div class="calc-card-header">
+            <span class="calc-card-title">Calculation ${id}</span>
+            <button class="calc-delete-btn" onclick="deleteCalcCard(${id})">✕ Remove</button>
+        </div>
+        <div class="calc-card-body">
+
+            <div class="form-group">
+                <label for="desc-${id}">Description / Location:</label>
+                <input type="text" id="desc-${id}" placeholder="e.g. Down conductor at north elevation window..."
+                    oninput="recalc(${id})">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="lps-class-${id}">LPS Class:</label>
+                    <select id="lps-class-${id}" onchange="recalc(${id})">
+                        <option value="">Select...</option>
+                        <option value="I">Class I (ki = 0.08)</option>
+                        <option value="II">Class II (ki = 0.06)</option>
+                        <option value="III">Class III (ki = 0.04)</option>
+                        <option value="IV">Class IV (ki = 0.04)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="material-${id}">Insulation Material:</label>
+                    <select id="material-${id}" onchange="recalc(${id})">
+                        <option value="">Select...</option>
+                        <option value="air">Air (km = 1.0)</option>
+                        <option value="solid">Concrete, Brick or Wood (km = 0.5)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="approach-${id}">Calculation Approach:</label>
+                    <select id="approach-${id}" onchange="onApproachChange(${id})">
+                        <option value="simplified">Simplified (Cl. 6.3.2)</option>
+                        <option value="detailed">Detailed (Cl. 6.3.3 / Annex C)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="length-${id}">Length <em>l</em> (m):</label>
+                    <input type="number" id="length-${id}" min="0" step="0.1" placeholder="0.0"
+                        oninput="recalc(${id})">
+                </div>
+            </div>
+
+            <!-- Simplified: down-conductor count -->
+            <div class="form-group kc-simplified" id="kc-simp-wrap-${id}">
+                <label for="num-dc-${id}">Number of Down-Conductors:</label>
+                <select id="num-dc-${id}" onchange="recalc(${id})">
+                    <option value="">Select...</option>
+                    <option value="1">1 — isolated LPS (kc = 1.00)</option>
+                    <option value="2">2 (kc = 0.66)</option>
+                    <option value="3">3 or more (kc = 0.44)</option>
+                </select>
+            </div>
+
+            <!-- Detailed: manual kc entry -->
+            <div class="form-group kc-detailed" id="kc-det-wrap-${id}">
+                <label for="kc-manual-${id}">kc value (from Annex C figures):</label>
+                <input type="number" id="kc-manual-${id}" min="0" max="1" step="0.01" placeholder="e.g. 0.52"
+                    oninput="recalc(${id})">
+                <div class="info-note">
+                    Determine kc from Figures C.1–C.5 of BS EN 62305-3 based on the geometry of the air-termination and down-conductor arrangement.
+                </div>
+            </div>
+
+            <!-- Optional: measured actual distance -->
+            <div class="form-group" style="margin-top:6px;">
+                <label for="actual-${id}">Actual Distance Available (mm) — optional:</label>
+                <input type="number" id="actual-${id}" min="0" step="1" placeholder="Enter measured distance to check compliance..."
+                    oninput="recalc(${id})">
+            </div>
+
+            <!-- Live result -->
+            <div id="result-${id}"></div>
+
+        </div>
+    `;
+    container.appendChild(card);
+    recalc(id);
+}
+
+function deleteCalcCard(id) {
+    const card = document.getElementById('calc-card-' + id);
+    if (card) card.remove();
+    // If no cards left, show empty message
+    const container = document.getElementById('calc-cards-container');
+    if (!container.querySelector('.calc-card')) {
+        container.innerHTML = '<div class="no-calcs" id="no-calcs-msg">No calculations yet. Use the button below to add one.</div>';
+    }
+}
+
+function onApproachChange(id) {
+    const approach = document.getElementById('approach-' + id).value;
+    document.getElementById('kc-simp-wrap-' + id).style.display = approach === 'simplified' ? 'block' : 'none';
+    document.getElementById('kc-det-wrap-'  + id).style.display = approach === 'detailed'   ? 'block' : 'none';
+    recalc(id);
+}
+
+function recalc(id) {
+    const lpsClass = document.getElementById('lps-class-' + id).value;
+    const material = document.getElementById('material-'  + id).value;
+    const approach = document.getElementById('approach-'  + id).value;
+    const lVal     = parseFloat(document.getElementById('length-' + id).value);
+    const resultEl = document.getElementById('result-' + id);
+
+    let kc, kcLabel;
+    if (approach === 'simplified') {
+        const numDC = document.getElementById('num-dc-' + id).value;
+        kc = numDC ? KC_SIMPLIFIED[numDC] : null;
+        kcLabel = kc != null ? kc.toFixed(2) : '—';
+    } else {
+        const manual = parseFloat(document.getElementById('kc-manual-' + id).value);
+        kc = isNaN(manual) ? null : manual;
+        kcLabel = kc != null ? kc.toFixed(2) : '—';
+    }
+
+    const ki = lpsClass ? KI[lpsClass] : null;
+    const km = material ? KM[material] : null;
+
+    // Not enough inputs yet
+    if (ki == null || km == null || kc == null || isNaN(lVal) || lVal <= 0) {
+        resultEl.innerHTML = '<div style="color:#aaa;font-style:italic;font-size:13px;margin-top:10px;">Complete all fields above to see the result.</div>';
+        return;
+    }
+
+    const s_m  = (ki / km) * kc * lVal;          // metres
+    const s_mm = Math.round(s_m * 1000);          // millimetres, rounded to nearest mm
+
+    // Compliance check
+    const actualVal = parseFloat(document.getElementById('actual-' + id).value);
+    let complianceHTML = '';
+    if (!isNaN(actualVal) && actualVal > 0) {
+        const pass = actualVal >= s_mm;
+        complianceHTML = `<span class="compliance-badge ${pass ? 'badge-pass' : 'badge-fail'}">${pass ? '✓ PASS' : '✗ FAIL'}</span>`;
+    }
+
+    resultEl.innerHTML = `
+        <div class="result-pill">
+            <div>
+                <div class="result-label">Required Separation Distance</div>
+                <div><span class="result-value">${s_mm} mm</span>${complianceHTML}</div>
+            </div>
+        </div>
+        <div class="coeff-row">
+            <div class="coeff-chip">ki = <span>${ki.toFixed(2)}</span></div>
+            <div class="coeff-chip">km = <span>${km.toFixed(1)}</span></div>
+            <div class="coeff-chip">kc = <span>${kcLabel}</span></div>
+            <div class="coeff-chip">l = <span>${lVal.toFixed(1)} m</span></div>
+            <div class="coeff-chip">s = <span>(${ki.toFixed(2)} / ${km.toFixed(1)}) × ${kcLabel} × ${lVal.toFixed(1)} = ${s_mm} mm</span></div>
+        </div>
+    `;
+}
+
+// ── PDF generation — delegates to sd-pdf.js ──
+function generateSDPDF() {
+    const cards = document.querySelectorAll('.calc-card');
+    if (!cards.length) {
+        alert('Please add at least one calculation before generating a report.');
+        return;
+    }
+
+    const siteName     = document.getElementById('siteName').value.trim();
+    const siteAddress  = document.getElementById('siteAddress').value.trim();
+    const calcDate     = document.getElementById('calcDate').value;
+    const engineerName = document.getElementById('engineerName').value.trim();
+
+    const calculations = [];
+    cards.forEach(card => {
+        const id = card.id.replace('calc-card-', '');
+
+        const lpsClass = document.getElementById('lps-class-' + id).value;
+        const material = document.getElementById('material-'  + id).value;
+        const approach = document.getElementById('approach-'  + id).value;
+        const lVal     = parseFloat(document.getElementById('length-' + id).value);
+        const desc     = document.getElementById('desc-' + id).value.trim();
+
+        let kc;
+        if (approach === 'simplified') {
+            const numDC = document.getElementById('num-dc-' + id).value;
+            kc = numDC ? KC_SIMPLIFIED[numDC] : null;
+        } else {
+            const manual = parseFloat(document.getElementById('kc-manual-' + id).value);
+            kc = isNaN(manual) ? null : manual;
+        }
+
+        const ki = lpsClass ? KI[lpsClass] : null;
+        const km = material ? KM[material] : null;
+
+        let s_mm = null;
+        if (ki != null && km != null && kc != null && !isNaN(lVal) && lVal > 0) {
+            s_mm = Math.round((ki / km) * kc * lVal * 1000);
+        }
+
+        const actualVal = parseFloat(document.getElementById('actual-' + id).value);
+        const actualMm  = isNaN(actualVal) ? null : actualVal;
+        let compliance  = null;
+        if (s_mm != null && actualMm != null) {
+            compliance = actualMm >= s_mm ? 'PASS' : 'FAIL';
+        }
+
+        // Readable labels for PDF
+        const lpsClassLabel = lpsClass ? `Class ${lpsClass}` : '-';
+        const materialLabel = material === 'air' ? 'Air' : material === 'solid' ? 'Concrete, Brick or Wood' : '-';
+        const approachLabel = approach === 'simplified' ? 'Simplified (Cl. 6.3.2)' : 'Detailed (Cl. 6.3.3 / Annex C)';
+        let kcSource = '-';
+        if (approach === 'simplified') {
+            const numDC = document.getElementById('num-dc-' + id).value;
+            kcSource = numDC === '1' ? '1 down-conductor' : numDC === '2' ? '2 down-conductors' : numDC === '3' ? '3+ down-conductors' : '-';
+        } else {
+            kcSource = 'Manual entry (Annex C)';
+        }
+
+        calculations.push({
+            index: calculations.length + 1,
+            desc: desc || `Calculation ${calculations.length + 1}`,
+            lpsClass, lpsClassLabel,
+            material, materialLabel,
+            approach, approachLabel,
+            ki, km, kc, kcSource,
+            l: isNaN(lVal) ? null : lVal,
+            s_mm,
+            actualMm,
+            compliance
+        });
+    });
+
+    sdGeneratePDF({ siteName, siteAddress, calcDate, engineerName, calculations });
+}
+</script>
+
+</body>
+</html>
