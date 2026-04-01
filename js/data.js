@@ -263,6 +263,26 @@ const standardFailures = {
     ],
     "NF C 17-102": [
         { 
+            failure: "High earth termination resistance", 
+            ref: "NF C 17-102, Section 5.5",
+            req: "Earth termination resistance value measured using a conventional equipment should be the lowest possible (less than 10ohms overall)."
+        },
+        { 
+            failure: "Lightning equipotential bonding", 
+            ref: "NF C 17-102, Section 5.5",
+            req: "Install bonding conductors, where the electrical continuity is not provided by natural bonding."
+        },
+        { 
+            failure: "Inadequate Test Joints", 
+            ref: "NF C 17-102, Section 5.3.7",
+            req: "Each down-conductor should be provided with a test joint in order to disconnect the earth termination system for enabling measurements."
+        },
+        { 
+            failure: "Damaged/Broken System Components", 
+            ref: "NF C 17-102, Section 8.5",
+            req: "Replace damaged components with new."
+        },
+        { 
             failure: "ESE efficiency (DT) not verified or inadequate", 
             ref: "NF C 17-102, Section 5.2.2",
             req: "Verify ESE timing meets minimum ΔT requirements through certified testing"
@@ -271,11 +291,6 @@ const standardFailures = {
             failure: "Protection radius calculation errors", 
             ref: "NF C 17-102, Section 5.2.3, Equation 1",
             req: "Recalculate protection radius using correct ESE methodology and install additional terminals if required"
-        },
-        { 
-            failure: "Air terminal not meeting ESE testing requirements", 
-            ref: "NF C 17-102, Section 6.1",
-            req: "Replace with certified ESE air terminal meeting French standard testing requirements"
         },
         { 
             failure: "Down conductor installation non-compliant", 
