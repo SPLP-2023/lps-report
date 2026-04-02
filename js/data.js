@@ -263,6 +263,11 @@ const standardFailures = {
     ],
     "NF C 17-102": [
         { 
+            failure: "Corrosion", 
+            ref: "NF C 17-102, Section 8.7",
+            req: "Any faults found in the ESESystem during an inspection should be corrected as soon as possible in order to maintain its optimal effectiveness."
+        },
+        { 
             failure: "High earth termination resistance", 
             ref: "NF C 17-102, Section 5.5",
             req: "Earth termination resistance value measured using a conventional equipment should be the lowest possible (less than 10ohms overall)."
@@ -304,7 +309,7 @@ const standardFailures = {
         },
         { 
             failure: "ESE device not certified to NF C 17-102", 
-            ref: "NF C 17-102, Section 4.1",
+            ref: "NF C 17-102, Section 8.4",
             req: "Replace with ESE device holding valid certification to French standard"
         },
         { 
