@@ -543,7 +543,7 @@ const earthDropdownOptions = {
     testClamp: ['','Stainless','Bi-Metallic','G-Clamp','A-Clamp','Sq. Clamp','Oblong','B-Bond','Coffin Clamp','Other'],
     pitType:   ['','Concrete','Polymer','None','Other'],
     testType:  ['','Dead','FOP','Continuity','Reference','No Test'],
-    groundType:['','Gravel','Tarmac','Soft','Slabs','Concrete','Astro','Other'],
+    groundType:['','Gravel','Tarmac','Soft','Slabs','Concrete','Astro','Block Pave','Other'],
     earthType: ['','Earth Rod','Earth Matt','B-Ring','REF','Foundations','Other','Unknown']
 };
 
