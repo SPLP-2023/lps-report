@@ -544,34 +544,57 @@ window.restoreClientSignature = function(data) {
     // ===================== IMAGE HANDLING =====================
     window.uploadedImages = {};
 
+    function compressImage(base64Str, maxWidth, maxHeight, quality) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                const ar = w / h;
+                if (w > maxWidth) { w = maxWidth; h = maxWidth / ar; }
+                if (h > maxHeight) { h = maxHeight; w = maxHeight * ar; }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = base64Str;
+        });
+    }
+
     function handleImageUpload(input, previewId) {
         if (!input.files[0]) return;
         const file = input.files[0];
         document.getElementById(previewId).textContent = 'Processing...';
-        fixImageOrientation(file).then(data => {
-            window.uploadedImages[previewId + '_data'] = data;
-            document.getElementById(previewId).textContent = '✓ Image uploaded';
-            updateAllDots();
-        }).catch(() => {
-            const reader = new FileReader();
-            reader.onload = e => {
-                window.uploadedImages[previewId + '_data'] = e.target.result;
+        fixImageOrientation(file)
+            .then(corrected => compressImage(corrected, 800, 800, 0.65))
+            .then(data => {
+                window.uploadedImages[previewId + '_data'] = data;
                 document.getElementById(previewId).textContent = '✓ Image uploaded';
                 updateAllDots();
-            };
-            reader.readAsDataURL(file);
-        });
+            }).catch(() => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    window.uploadedImages[previewId + '_data'] = e.target.result;
+                    document.getElementById(previewId).textContent = '✓ Image uploaded';
+                    updateAllDots();
+                };
+                reader.readAsDataURL(file);
+            });
     }
 
     function handleMultipleImageUpload(input, previewId) {
         if (!input.files.length) return;
         const files = Array.from(input.files);
         document.getElementById(previewId).textContent = 'Processing ' + files.length + ' image(s)...';
-        const promises = files.map(f => fixImageOrientation(f).catch(() => new Promise(res => {
-            const r = new FileReader();
-            r.onload = e => res(e.target.result);
-            r.readAsDataURL(f);
-        })));
+        const promises = files.map(f =>
+            fixImageOrientation(f)
+                .then(corrected => compressImage(corrected, 800, 800, 0.65))
+                .catch(() => new Promise(res => {
+                    const r = new FileReader();
+                    r.onload = e => res(e.target.result);
+                    r.readAsDataURL(f);
+                }))
+        );
         Promise.all(promises).then(results => {
             window.uploadedImages[previewId + '_data'] = results;
             document.getElementById(previewId).textContent = '✓ ' + results.length + ' photo(s) uploaded';
@@ -597,7 +620,7 @@ window.restoreClientSignature = function(data) {
                             else { ctx.rotate(-90 * Math.PI / 180); ctx.translate(-canvas.height, 0); }
                         } else { canvas.width = img.width; canvas.height = img.height; }
                         ctx.drawImage(img, 0, 0);
-                        resolve(canvas.toDataURL('image/jpeg', 0.65));
+                        resolve(canvas.toDataURL('image/jpeg'));
                     };
                     img.src = e.target.result;
                 };
